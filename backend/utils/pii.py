@@ -145,3 +145,27 @@ def _scrub_prompt_raw(text: str, prefix: str = "") -> str:
     for ptype, pattern in _COMPILED_PATTERNS.items():
         result = pattern.sub(lambda m, pt=ptype: _replace(m, pt), result)
     return result
+
+
+def rehydrate_dict(data: dict, session_id: str) -> dict:
+    """
+    Recursively walk `data` and replace all token strings with their real values.
+    Used to rehydrate structured extraction results before sending to the frontend.
+    """
+    session = SESSIONS.get(session_id)
+    if not session or not session.get("token_map"):
+        return data
+    token_map = session["token_map"]
+    return _walk(data, token_map)
+
+
+def _walk(obj, token_map: dict):
+    if isinstance(obj, str):
+        for token, real in token_map.items():
+            obj = obj.replace(token, real)
+        return obj
+    if isinstance(obj, dict):
+        return {k: _walk(v, token_map) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_walk(item, token_map) for item in obj]
+    return obj

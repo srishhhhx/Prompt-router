@@ -23,7 +23,7 @@ LLAMA_CLOUD_API_KEY: str = os.environ.get("LLAMA_CLOUD_API_KEY", "")
 # Model identifiers
 # ---------------------------------------------------------------------------
 ROUTING_MODEL = "llama-3.1-8b-instant"
-PROCESSING_MODEL = "llama-3.1-70b-versatile"
+PROCESSING_MODEL = "llama-3.3-70b-versatile"  # llama-3.1-70b-versatile was decommissioned 2025-01
 
 # ---------------------------------------------------------------------------
 # Session settings

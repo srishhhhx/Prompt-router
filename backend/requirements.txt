@@ -1,0 +1,21 @@
+# Web framework
+fastapi==0.115.12
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+python-dotenv==1.1.0
+
+# Document parsing
+PyMuPDF==1.25.5
+langdetect==1.0.9
+llama-parse==0.6.26
+docling==2.32.0
+
+# LLM + structured output
+groq==0.22.0
+instructor==1.8.3
+
+# Data validation
+pydantic==2.11.1
+
+# HTTP client (for LlamaParse async)
+httpx==0.28.1

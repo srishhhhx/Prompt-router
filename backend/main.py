@@ -177,6 +177,34 @@ async def status(session_id: str):
 
 
 # ---------------------------------------------------------------------------
+# POST /session  →  text-only session (no document uploaded)
+# ---------------------------------------------------------------------------
+@app.post("/session", status_code=201)
+async def create_text_session():
+    """
+    Creates an immediately-ready empty session for text-only queries.
+    Use when the user submits a prompt without uploading a document.
+    """
+    session_id = create_session()
+    update_session_ready(
+        session_id,
+        metadata={
+            "page_count": 0,
+            "likely_has_tables": False,
+            "is_scanned": False,
+            "language": "unknown",
+            "parser_used": "none",
+            "text_preview": "",
+            "parsing_quality": "normal",
+        },
+        scrubbed_text="",
+        token_map={},
+    )
+    logger.info("Text-only session created: %s", session_id)
+    return {"session_id": session_id, "status": "ready"}
+
+
+# ---------------------------------------------------------------------------
 # POST /chat  →  SSE streaming response (Phase 2)
 # ---------------------------------------------------------------------------
 
@@ -212,24 +240,28 @@ async def chat(request: ChatRequest):
             # Step 2: Route
             routing_decision = await route(synced_prompt, session["metadata"])
 
-            # Step 3: Execute module + stream
+            # Step 3: Resolve document text (empty for text-only sessions)
+            raw_text = session.get("scrubbed_text") or ""
+            doc_text = raw_text if raw_text.strip() else (
+                "[No document was uploaded. Answer based on the user's prompt "
+                "and general financial knowledge.]"
+            )
+
             intent = routing_decision.intent
-            meta = session["metadata"]
+            meta   = session["metadata"]
 
             if intent == "summarization":
-                async for chunk in summarize_stream(
-                    session["scrubbed_text"], meta, synced_prompt
-                ):
+                async for chunk in summarize_stream(doc_text, meta, synced_prompt):
                     rehydrated_chunk = rehydrate(chunk, request.session_id)
                     yield f'data: {json.dumps({"type": "token", "content": rehydrated_chunk})}\n\n'
 
             elif intent == "extraction":
-                result = await extract(session["scrubbed_text"], meta, synced_prompt)
+                result = await extract(doc_text, meta, synced_prompt)
                 rehydrated = rehydrate_dict(result.model_dump(), request.session_id)
                 yield f'data: {json.dumps({"type": "token", "content": json.dumps(rehydrated), "is_card": True})}\n\n'
 
             elif intent == "classification":
-                result = await classify(session["scrubbed_text"], meta, synced_prompt)
+                result = await classify(doc_text, meta, synced_prompt)
                 rehydrated = rehydrate_dict(result.model_dump(), request.session_id)
                 yield f'data: {json.dumps({"type": "token", "content": json.dumps(rehydrated), "is_card": True})}\n\n'
 

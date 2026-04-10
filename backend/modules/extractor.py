@@ -17,7 +17,7 @@ from schemas.extraction import FinancialStatementSchema
 
 logger = logging.getLogger(__name__)
 
-MAX_EXTRACTOR_CHARS = 60_000
+MAX_EXTRACTOR_CHARS = 40_000   # ~10k tokens — Groq on-demand 70B cap is 12k TPM
 
 _SYSTEM_PROMPT = """\
 You are a financial data extraction specialist. Given a financial document, \

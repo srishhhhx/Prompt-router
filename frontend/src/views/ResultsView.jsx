@@ -10,8 +10,9 @@ export default function ResultsView({ sessionId, hasFile, filePreviewUrl, fileTy
   const [messages, setMessages]       = useState([])
   const [inputValue, setInputValue]   = useState('')
   const [isStreaming, setIsStreaming]  = useState(false)
-  const messagesEndRef = useRef(null)
-  const textareaRef    = useRef(null)
+  const messagesEndRef  = useRef(null)
+  const textareaRef     = useRef(null)
+  const sentInitialRef  = useRef(false)   // guards against React StrictMode double-fire
   const { startStream } = useSSEStream()
 
   // Auto-scroll to bottom whenever messages update
@@ -63,9 +64,12 @@ export default function ResultsView({ sessionId, hasFile, filePreviewUrl, fileTy
     })
   }, [sessionId, isStreaming, startStream])
 
-  // Send initial prompt when view mounts
+  // Send initial prompt exactly once when the view mounts
   useEffect(() => {
-    if (initialPrompt) sendMessage(initialPrompt)
+    if (initialPrompt && !sentInitialRef.current) {
+      sentInitialRef.current = true
+      sendMessage(initialPrompt)
+    }
   }, [])  // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSend = () => {

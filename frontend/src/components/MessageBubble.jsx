@@ -1,4 +1,6 @@
 import ExtractionCard from './ExtractionCard.jsx'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 const INTENT_COLORS = {
   summarization:  'badge--accent',
@@ -9,6 +11,11 @@ const INTENT_COLORS = {
 const FLAG_LABELS = {
   degraded_parsing:  'Degraded parsing',
   scanned_document:  'Scanned doc',
+}
+
+function toPascalCase(str) {
+  if (!str) return ''
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
 }
 
 export default function MessageBubble({ message }) {
@@ -23,8 +30,14 @@ export default function MessageBubble({ message }) {
         <ExtractionCard content={content} intent={intent} />
       ) : (
         <div className="message__bubble">
-          {content}
-          {isStreaming && <span className="message__cursor" aria-hidden="true" />}
+          {isUser ? (
+            content
+          ) : (
+            <div className="markdown-prose">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+              {isStreaming && <span className="message__cursor" aria-hidden="true" />}
+            </div>
+          )}
         </div>
       )}
 
@@ -32,11 +45,11 @@ export default function MessageBubble({ message }) {
       {!isUser && !isStreaming && intent && (
         <div className="message__meta">
           <span className={`badge ${INTENT_COLORS[intent] || 'badge--muted'}`}>
-            {intent}
+            {toPascalCase(intent)}
           </span>
           {confidence != null && (
             <span className="badge badge--muted">
-              {Math.round(confidence * 100)}% confidence
+              {Math.round(confidence * 100)}% Confidence
             </span>
           )}
           {metaFlags.map((f, i) => (

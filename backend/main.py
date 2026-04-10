@@ -14,6 +14,7 @@ import asyncio
 import json
 import logging
 import sys
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException
@@ -233,12 +234,19 @@ async def chat(request: ChatRequest):
 
     async def event_generator():
         routing_decision = None
+        sid = request.session_id
         try:
             # Step 1: Sync prompt with PII token map
-            synced_prompt = sync_prompt_with_tokens(request.prompt, request.session_id)
+            synced_prompt = sync_prompt_with_tokens(request.prompt, sid)
 
-            # Step 2: Route
+            # Step 2: Route  (timed)
+            t_route = time.perf_counter()
             routing_decision = await route(synced_prompt, session["metadata"])
+            route_ms = (time.perf_counter() - t_route) * 1000
+            logger.info(
+                "[%s] ⏱  Router: %.0f ms | intent=%s confidence=%.2f",
+                sid, route_ms, routing_decision.intent, routing_decision.confidence,
+            )
 
             # Step 3: Resolve document text (empty for text-only sessions)
             raw_text = session.get("scrubbed_text") or ""
@@ -250,22 +258,38 @@ async def chat(request: ChatRequest):
             intent = routing_decision.intent
             meta   = session["metadata"]
 
+            # Step 4: Execute module (timed per intent)
+            t_module = time.perf_counter()
+
             if intent == "summarization":
+                first_chunk = True
                 async for chunk in summarize_stream(doc_text, meta, synced_prompt):
-                    rehydrated_chunk = rehydrate(chunk, request.session_id)
+                    if first_chunk:
+                        ttft_ms = (time.perf_counter() - t_module) * 1000
+                        logger.info("[%s] ⏱  Summarizer TTFT: %.0f ms", sid, ttft_ms)
+                        first_chunk = False
+                    rehydrated_chunk = rehydrate(chunk, sid)
                     yield f'data: {json.dumps({"type": "token", "content": rehydrated_chunk})}\n\n'
+                total_ms = (time.perf_counter() - t_module) * 1000
+                logger.info("[%s] ⏱  Summarizer total stream: %.0f ms", sid, total_ms)
 
             elif intent == "extraction":
                 result = await extract(doc_text, meta, synced_prompt)
-                rehydrated = rehydrate_dict(result.model_dump(), request.session_id)
+                exec_ms = (time.perf_counter() - t_module) * 1000
+                logger.info("[%s] ⏱  Extractor: %.0f ms | confidence=%.2f anomalies=%d",
+                            sid, exec_ms, result.extraction_confidence, len(result.flagged_anomalies))
+                rehydrated = rehydrate_dict(result.model_dump(), sid)
                 yield f'data: {json.dumps({"type": "token", "content": json.dumps(rehydrated), "is_card": True})}\n\n'
 
             elif intent == "classification":
                 result = await classify(doc_text, meta, synced_prompt)
-                rehydrated = rehydrate_dict(result.model_dump(), request.session_id)
+                exec_ms = (time.perf_counter() - t_module) * 1000
+                logger.info("[%s] ⏱  Classifier: %.0f ms | doc_type=%s confidence=%.2f",
+                            sid, exec_ms, result.document_type, result.confidence)
+                rehydrated = rehydrate_dict(result.model_dump(), sid)
                 yield f'data: {json.dumps({"type": "token", "content": json.dumps(rehydrated), "is_card": True})}\n\n'
 
-            # Step 4: Done event (always sent)
+            # Done event
             flags = []
             if meta.get("parsing_quality") == "degraded":
                 flags.append("degraded_parsing")
@@ -277,9 +301,8 @@ async def chat(request: ChatRequest):
             yield f'data: {json.dumps({"type": "done", "intent": routing_decision.intent, "confidence": routing_decision.confidence, "reasoning": routing_decision.reasoning, "parser_used": meta.get("parser_used"), "flags": flags})}\n\n'
 
         except Exception as exc:
-            logger.exception("[%s] Chat pipeline error: %s", request.session_id, exc)
+            logger.exception("[%s] Chat pipeline error: %s", sid, exc)
             yield f'data: {json.dumps({"type": "error", "message": str(exc)})}\n\n'
-            # Still send done event so the frontend can close the stream cleanly
             if routing_decision:
                 yield f'data: {json.dumps({"type": "done", "intent": routing_decision.intent, "confidence": 0.0, "parser_used": session["metadata"].get("parser_used"), "flags": ["error"]})}\n\n'
             else:
@@ -337,17 +360,40 @@ async def _run_phase_a(
             )
             return
 
+        t0 = time.perf_counter()
+
         # Step 1: Scout
+        t_scout = time.perf_counter()
         logger.info("[%s] Phase A step 1: PyMuPDF Scout", session_id)
         scout_result = run_scout(file_bytes, filename=filename)
+        logger.info("[%s] ⏱  Scout: %.0f ms", session_id, (time.perf_counter() - t_scout) * 1000)
 
         # Step 2+3: Parser routing + execution
+        t_parse = time.perf_counter()
         logger.info("[%s] Phase A step 2-3: Parser factory", session_id)
         parser_result = await parse_document(file_bytes, scout_result, filename=filename)
+        logger.info(
+            "[%s] ⏱  Parsing: %.0f ms | parser=%s quality=%s",
+            session_id,
+            (time.perf_counter() - t_parse) * 1000,
+            parser_result["parser_used"],
+            parser_result["parsing_quality"],
+        )
 
         # Step 4: PII scrubbing
+        t_pii = time.perf_counter()
         logger.info("[%s] Phase A step 4: PII scrubber", session_id)
         scrub_result = scrub_document(parser_result["parsed_text"])
+        token_map = scrub_result["token_map"]
+        logger.info("[%s] ⏱  PII scrub: %.0f ms | %d token(s) found",
+                    session_id, (time.perf_counter() - t_pii) * 1000, len(token_map))
+        if token_map:
+            pii_display = " | ".join(
+                f"{token} → {value}" for token, value in token_map.items()
+            )
+            logger.info("[%s] 🔐 PII map: %s", session_id, pii_display)
+        else:
+            logger.info("[%s] 🔐 PII map: (none detected)", session_id)
 
         # Step 5: Metadata assembly
         metadata = assemble_metadata(scout_result, parser_result)
@@ -357,9 +403,11 @@ async def _run_phase_a(
             session_id,
             metadata=metadata,
             scrubbed_text=scrub_result["scrubbed_text"],
-            token_map=scrub_result["token_map"],
+            token_map=token_map,
         )
-        logger.info("[%s] Phase A complete — session ready", session_id)
+        total_ms = (time.perf_counter() - t0) * 1000
+        logger.info("[%s] ✅ Phase A complete — %.0f ms total | parser=%s",
+                    session_id, total_ms, parser_result["parser_used"])
 
     except Exception as exc:
         error_msg = f"{type(exc).__name__}: {exc}"

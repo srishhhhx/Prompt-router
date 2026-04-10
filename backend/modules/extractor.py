@@ -17,7 +17,7 @@ from schemas.extraction import FinancialStatementSchema
 
 logger = logging.getLogger(__name__)
 
-MAX_EXTRACTOR_CHARS = 40_000   # ~10k tokens — Groq on-demand 70B cap is 12k TPM
+MAX_EXTRACTOR_CHARS = 32_000   # ~8k tokens — LlamaParse markdown is denser (~1 tok/3 chars)
 
 _SYSTEM_PROMPT = """\
 You are a financial data extraction specialist. Given a financial document, \

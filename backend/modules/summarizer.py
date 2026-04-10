@@ -18,7 +18,7 @@ from config import GROQ_API_KEY, PROCESSING_MODEL
 
 logger = logging.getLogger(__name__)
 
-MAX_SUMMARIZER_CHARS = 40_000   # ~10k tokens — Groq on-demand 70B cap is 12k TPM
+MAX_SUMMARIZER_CHARS = 32_000   # ~8k tokens — LlamaParse markdown is denser (~1 tok/3 chars)
 
 _SYSTEM_PROMPT = """\
 You are a financial document analyst. You produce clear, structured summaries of \

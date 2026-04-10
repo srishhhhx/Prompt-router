@@ -5,19 +5,26 @@ Decision logic (deterministic, no LLM):
   - Simple path:  is_scanned=False AND has_complex_layout=False AND likely_has_tables=False
                   → use PyMuPDF text directly (fast, zero external dependency)
   - Complex path: any signal is True
-                  → try LlamaParse (markdown, table-preserving)
-                  → on any failure: try Docling (local, markdown, zero egress)
+                  → try LlamaParse via LlamaCloud REST API (markdown, table-preserving)
+                  → on any failure: try Docling (local, weights load only here)
                   → on any failure: use raw PyMuPDF text with parsing_quality=degraded
 
-Parser outputs are never mixed. Once a parser is selected, all downstream
-processing uses only that parser's output.
+LlamaParse implementation uses the LlamaCloud REST API directly (httpx, no SDK)
+so there is zero dependency on llama_index / llama-parse packages. This avoids the
+Python 3.9 incompatibility in llama-index-core ≥ 0.12 (uses X | None union syntax).
+
+Docling weights are NOT loaded at import time. DocumentConverter() is only
+instantiated inside _try_docling(), which is only called when LlamaParse fails.
 """
 
 import asyncio
 import logging
+import os
+import tempfile
 from typing import Optional
 
-import fitz  # PyMuPDF
+import fitz   # PyMuPDF
+import httpx
 
 from config import (
     LLAMA_CLOUD_API_KEY,
@@ -30,6 +37,11 @@ from config import (
 )
 
 logger = logging.getLogger(__name__)
+
+# LlamaCloud REST API
+_LLAMA_BASE    = "https://api.cloud.llamaindex.ai/api/parsing"
+_POLL_INTERVAL = 3.0    # seconds between job status polls
+_MAX_WAIT      = 180.0  # seconds before giving up
 
 
 # ---------------------------------------------------------------------------
@@ -63,7 +75,7 @@ async def parse_document(file_bytes: bytes, scout_result: dict, filename: str = 
         }
 
     # Complex path — try cascade
-    logger.info("[%s] Complex path: attempting LlamaParse", filename)
+    logger.info("[%s] Complex path: attempting LlamaParse (REST API)", filename)
     text = await _try_llamaparse(file_bytes, filename)
     if text is not None:
         return {
@@ -91,68 +103,130 @@ async def parse_document(file_bytes: bytes, scout_result: dict, filename: str = 
 
 
 # ---------------------------------------------------------------------------
-# Parser implementations
+# PyMuPDF (always available, zero egress)
 # ---------------------------------------------------------------------------
 
 def _extract_pymupdf(file_bytes: bytes) -> str:
     """Extract plain text using PyMuPDF. Always succeeds."""
     doc = fitz.open(stream=file_bytes, filetype="pdf")
-    pages = []
-    for page in doc:
-        pages.append(page.get_text("text"))
+    pages = [page.get_text("text") for page in doc]
     doc.close()
     return "\n\n".join(pages)
 
 
+# ---------------------------------------------------------------------------
+# LlamaParse via LlamaCloud REST API (no SDK — pure httpx)
+# ---------------------------------------------------------------------------
+
 async def _try_llamaparse(file_bytes: bytes, filename: str) -> Optional[str]:
     """
-    Parse with LlamaParse (cloud, markdown output mode).
+    Calls the LlamaCloud REST API directly using httpx.
+    No llama-parse / llama-index packages required — eliminates the Python 3.9
+    incompatibility in llama-index-core ≥ 0.12 (X | None union syntax).
+
+    Flow:
+      POST /upload          → job_id
+      GET  /job/{id}        → poll until status == SUCCESS (or timeout)
+      GET  /job/{id}/result/markdown → markdown text
+
     Returns None on any failure so the cascade can continue.
     """
-    try:
-        from llama_parse import LlamaParse
-
-        loop = asyncio.get_event_loop()
-
-        def _run_llamaparse() -> str:
-            parser = LlamaParse(
-                api_key=LLAMA_CLOUD_API_KEY,
-                result_type="markdown",
-                verbose=False,
-            )
-            # LlamaParse expects a file path or bytes; use from_bytes where available
-            # Save bytes to a temp-like bytes buffer and parse
-            import tempfile, os
-            suffix = ".pdf"
-            with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-                tmp.write(file_bytes)
-                tmp_path = tmp.name
-            try:
-                documents = parser.load_data(tmp_path)
-                return "\n\n".join(doc.text for doc in documents)
-            finally:
-                os.unlink(tmp_path)
-
-        text = await loop.run_in_executor(None, _run_llamaparse)
-        if not text.strip():
-            logger.warning("[%s] LlamaParse returned empty text", filename)
-            return None
-        logger.info("[%s] LlamaParse succeeded (%d chars)", filename, len(text))
-        return text
-
-    except Exception as exc:
-        logger.warning("[%s] LlamaParse error: %s", filename, exc)
+    if not LLAMA_CLOUD_API_KEY:
+        logger.warning("[%s] LlamaParse skipped — LLAMA_CLOUD_API_KEY not set", filename)
         return None
 
+    headers = {"Authorization": f"Bearer {LLAMA_CLOUD_API_KEY}"}
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+
+            # ── Step 1: Upload ──────────────────────────────────────────────
+            upload_resp = await client.post(
+                f"{_LLAMA_BASE}/upload",
+                headers=headers,
+                files={"file": (filename, file_bytes, "application/pdf")},
+                data={"language": "en", "result_type": "markdown"},
+            )
+            upload_resp.raise_for_status()
+            job_id = upload_resp.json()["id"]
+            logger.info("[%s] LlamaParse job submitted: %s", filename, job_id)
+
+            # ── Step 2: Poll until done ─────────────────────────────────────
+            elapsed = 0.0
+            status  = "PENDING"
+            while elapsed < _MAX_WAIT:
+                await asyncio.sleep(_POLL_INTERVAL)
+                elapsed += _POLL_INTERVAL
+
+                status_resp = await client.get(
+                    f"{_LLAMA_BASE}/job/{job_id}",
+                    headers=headers,
+                    timeout=15.0,
+                )
+                status_resp.raise_for_status()
+                status = status_resp.json().get("status", "PENDING")
+                logger.debug(
+                    "[%s] LlamaParse job %s — status=%s elapsed=%.0fs",
+                    filename, job_id, status, elapsed,
+                )
+
+                if status == "SUCCESS":
+                    break
+                if status in ("ERROR", "CANCELLED"):
+                    logger.warning(
+                        "[%s] LlamaParse job %s failed with status=%s",
+                        filename, job_id, status,
+                    )
+                    return None
+
+            if status != "SUCCESS":
+                logger.warning(
+                    "[%s] LlamaParse job %s timed out after %.0fs",
+                    filename, job_id, _MAX_WAIT,
+                )
+                return None
+
+            # ── Step 3: Fetch markdown result ───────────────────────────────
+            result_resp = await client.get(
+                f"{_LLAMA_BASE}/job/{job_id}/result/markdown",
+                headers=headers,
+                timeout=30.0,
+            )
+            result_resp.raise_for_status()
+            text = result_resp.json().get("markdown", "")
+
+            if not text.strip():
+                logger.warning("[%s] LlamaParse returned empty markdown", filename)
+                return None
+
+            logger.info(
+                "[%s] LlamaParse succeeded via REST API (%d chars)",
+                filename, len(text),
+            )
+            return text
+
+    except Exception as exc:
+        logger.warning("[%s] LlamaParse REST error: %s", filename, exc)
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Docling (local, zero data egress)
+# ---------------------------------------------------------------------------
 
 async def _try_docling(file_bytes: bytes, filename: str) -> Optional[str]:
     """
     Parse with Docling (local, markdown output, zero data egress).
+
+    IMPORTANT: Docling model weights are loaded lazily — DocumentConverter() is
+    instantiated inside this function, which is only called when LlamaParse fails.
+    No model loading happens at server startup or on the simple parser path.
+
     Returns None on any failure so the cascade can continue.
     """
     try:
-        from docling.document_converter import DocumentConverter
-        import tempfile, os
+        # Late import: triggers model download/load only when this fallback runs.
+        from docling.document_converter import DocumentConverter  # noqa: PLC0415
 
         loop = asyncio.get_event_loop()
 
@@ -161,7 +235,7 @@ async def _try_docling(file_bytes: bytes, filename: str) -> Optional[str]:
                 tmp.write(file_bytes)
                 tmp_path = tmp.name
             try:
-                converter = DocumentConverter()
+                converter = DocumentConverter()          # weights loaded here
                 result = converter.convert(tmp_path)
                 return result.document.export_to_markdown()
             finally:
@@ -171,6 +245,7 @@ async def _try_docling(file_bytes: bytes, filename: str) -> Optional[str]:
         if not text.strip():
             logger.warning("[%s] Docling returned empty text", filename)
             return None
+
         logger.info("[%s] Docling succeeded (%d chars)", filename, len(text))
         return text
 

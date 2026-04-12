@@ -1,7 +1,7 @@
-# Financial Document Intelligence Pipeline (FDIP)
+# Financial Document Intelligence Pipeline
 
 ## Table of Contents
-- [Financial Document Intelligence Pipeline (FDIP)](#financial-document-intelligence-pipeline-fdip)
+- [Financial Document Intelligence Pipeline](#financial-document-intelligence-pipeline)
   - [Table of Contents](#table-of-contents)
   - [1. Introduction](#1-introduction)
   - [2. Demo Video](#2-demo-video)
@@ -40,7 +40,7 @@ The pipeline further includes automatic PII tokenization and rehydration, adapti
 
 ## 3. Architecture
 
-![Architecture Diagram](./assets/architecture.png)
+![Architecture Diagram](./assets/Architecture.png)
 
 **Pipeline Flow:**
 

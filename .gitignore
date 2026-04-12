@@ -26,11 +26,11 @@ frontend/.vite/
 Thumbs.db
 
 # Uploads (temp files — never commit user documents)
+uploads/*.pdf
+uploads/*.png
+uploads/*.jpg
+uploads/*.jpeg
 uploads/
-*.pdf
-*.png
-*.jpg
-*.jpeg
 
 # IDE
 .vscode/
@@ -45,3 +45,6 @@ parser_tests/
 
 # Scratch / debug scripts
 backend/scratch/
+
+# Evaluation suite
+backend/eval/

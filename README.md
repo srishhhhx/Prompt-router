@@ -16,6 +16,8 @@
   - [7. Tech Stack](#7-tech-stack)
   - [8. Project Structure](#8-project-structure)
   - [9. Setup](#9-setup)
+    - [Quick Start (Docker)](#quick-start-docker)
+    - [Manual Setup](#manual-setup)
     - [Prerequisites](#prerequisites)
     - [Step 1: Clone \& Setup](#step-1-clone--setup)
     - [Step 2: Backend Setup](#step-2-backend-setup)

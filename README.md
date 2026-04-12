@@ -61,21 +61,16 @@ The pipeline further includes automatic PII tokenization and rehydration, adapti
 
 ### Prompt Routing Strategy
 
-* **Intent Router as the Central Gatekeeper:** Rather than sending every query through a single general-purpose prompt, a lightweight **8B model classifies intent first**. This keeps extraction prompts sharp (no summary preamble) and summarization prompts broad (no field-hunting), improving output quality for both tasks.
-
-* **Metadata-Augmented Routing:** The router doesn't classify prompts in isolation — it receives document signals (`page_count`, `likely_has_tables`, `doc_type_hint`, `text_preview`) alongside the prompt. This context helps disambiguate edge cases like *"show me the transactions"* (extraction on a bank statement vs. summarization on a narrative report).
-
-* **Structured Routing Output:** Every routing decision is enforced through an `instructor`-wrapped Pydantic schema (`RoutingDecision`), guaranteeing a valid `intent`, numeric `confidence`, and human-readable `reasoning` string — no fragile regex parsing of freeform LLM text.
+* **Intent Router as the Central Gatekeeper:** A lightweight 8B model classifies intent first, allowing downstream prompts to be specialized and high-quality.
+* **Metadata-Augmented Routing:** Uses document signals (page count, table presence) to disambiguate intent in complex edge cases.
+* **Structured Routing Output:** Enforces decisions through Pydantic/Instructor, ensuring valid schemas and eliminating fragile regex parsing.
 
 ### System Design
 
-* **Multi-Provider LLM Fallback:** Cerebras is the primary generation provider for extraction and summarization. If it returns a 429, the system automatically falls back to Groq — ensuring the pipeline never hard-fails on a single provider outage.
-
-* **PII Tokenization over Redaction:** Instead of permanently stripping sensitive data, we replace PII with reversible tokens (`{{PAN_1}}`). The LLM can reference the token in its response, and rehydration restores the real value before the user sees it — keeping sensitive data out of third-party LLM APIs without breaking answer correctness.
-
-* **Head-Tail Truncation with Snap:** For documents exceeding the context window, a 60/40 head-tail split preserves the opening (company name, report title) and closing sections (signatures, totals). Sentence-boundary snapping prevents mid-word cuts, and a gap marker explicitly tells the LLM that content was omitted.
-
-* **PyMuPDF Scout → Parser Routing:** A zero-cost structural pre-scan (drawing count, average chars per block, image count) determines whether a document needs the simple PyMuPDF path or the heavier LlamaParse API — avoiding unnecessary API calls for clean digital PDFs.
+* **Multi-Provider LLM Fallback:** Automatically switches between Cerebras and Groq on 429 errors to prevent pipeline failures.
+* **PII Tokenization over Redaction:** Uses reversible tokens to protect sensitive data while maintaining answer correctness.
+* **Head-Tail Truncation with Snap:** Preserves critical document context using a 60/40 split and sentence-boundary snapping.
+* **PyMuPDF Scout → Parser Routing:** Fast structural scans skip high-latency parsing APIs for simple digital PDFs, saving time and cost.
 
 
 ## 5. Evaluation & Observability
@@ -162,12 +157,26 @@ Prompt-routing/
 │   ├── session.py                   # In-memory session store
 │   └── config.py                    # All thresholds, models, and env loading
 ├── parser_tests/                    # Parser comparison outputs
-├── start_backend.sh                 # Backend launch script
+├── docker-compose.yml               # Docker orchestration
 └── .env                             # API keys (not committed)
 ```
 
 
 ## 9. Setup
+
+### Quick Start (Docker)
+
+1.  **Prerequisites**: Install [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+2.  **Config**: Create a `.env` file in the `backend/` directory (see [Step 2](#step-2-backend-setup) below).
+3.  **Launch**:
+    ```bash
+    docker-compose up --build
+    ```
+4.  **Access**: Frontend at `http://localhost:5173`, Backend at `http://localhost:8000`.
+
+---
+
+### Manual Setup
 
 ### Prerequisites
 * Python 3.9+
@@ -209,15 +218,22 @@ npm install
 ```
 
 ### Step 4: Run the Application
-```bash
-# Terminal 1: Start Backend (from project root)
-./start_backend.sh
 
-# Terminal 2: Start Frontend
+**Terminal 1: Backend**
+```bash
+cd backend
+source venv/bin/activate
+export PYTHONPATH="."
+uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+**Terminal 2: Frontend**
+```bash
 cd frontend
 npm run dev
 ```
-Access the application at http://localhost:5173.
+
+Access the application at `http://localhost:5173`.
 
 
 ## 10. Path to Production

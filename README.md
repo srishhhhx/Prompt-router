@@ -1,28 +1,18 @@
 # Financial Document Intelligence Pipeline
 
 ## Table of Contents
+
 - [Financial Document Intelligence Pipeline](#financial-document-intelligence-pipeline)
   - [Table of Contents](#table-of-contents)
   - [1. Introduction](#1-introduction)
   - [2. Demo Video](#2-demo-video)
   - [3. Architecture](#3-architecture)
   - [4. Design Decisions](#4-design-decisions)
-    - [Prompt Routing Strategy](#prompt-routing-strategy)
-    - [System Design](#system-design)
-  - [5. Evaluation \& Observability](#5-evaluation--observability)
-    - [Evaluation Suite](#evaluation-suite)
-    - [Observability](#observability)
+  - [5. Evaluation, Observability \& Tests](#5-evaluation-observability--tests)
   - [6. API Endpoints](#6-api-endpoints)
   - [7. Tech Stack](#7-tech-stack)
   - [8. Project Structure](#8-project-structure)
   - [9. Setup](#9-setup)
-    - [Quick Start (Docker)](#quick-start-docker)
-    - [Manual Setup](#manual-setup)
-    - [Prerequisites](#prerequisites)
-    - [Step 1: Clone \& Setup](#step-1-clone--setup)
-    - [Step 2: Backend Setup](#step-2-backend-setup)
-    - [Step 3: Frontend Setup](#step-3-frontend-setup)
-    - [Step 4: Run the Application](#step-4-run-the-application)
   - [10. Path to Production](#10-path-to-production)
 
 
@@ -75,7 +65,7 @@ The pipeline further includes automatic PII tokenization and rehydration, adapti
 * **PyMuPDF Scout → Parser Routing:** Fast structural scans skip high-latency parsing APIs for simple digital PDFs, saving time and cost.
 
 
-## 5. Evaluation & Observability
+## 5. Evaluation, Observability & Tests
 
 ### Evaluation Suite
 
@@ -98,6 +88,10 @@ The project includes a custom evaluation framework (`backend/eval/`) that benchm
 - Session-grouped traces for end-to-end request debugging
 
 **Example:** View a [snapshot of system traces](./assets/Langsmith.png) showing the router delegating to specialized modules.
+
+### Tests
+
+The backend includes a formal test suite covering core utility operations and API endpoints, maintaining a strict boundary from the LLM observability evaluation routines. Please see [Tests.md](./Tests.md) for detailed analysis and execution results.
 
 
 ## 6. API Endpoints

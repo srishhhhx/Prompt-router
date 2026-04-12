@@ -1,18 +1,14 @@
 """
-scout.py — PyMuPDF full-document metadata extractor.
+scout.py — PyMuPDF structural pre-scan.
 
-Scans the entire document (not just the first page) and returns raw metrics
-plus three derived routing signals: is_scanned, has_complex_layout, likely_has_tables.
+Scans the entire document and returns raw metrics plus three derived routing
+signals: is_scanned, has_complex_layout, likely_has_tables.
 
 All threshold comparisons use named constants from config.py.
-Calibrate thresholds by running:
-
-    python -m utils.scout <path_to_document.pdf>
-
-and inspecting the printed raw values before changing config constants.
 """
 
 import logging
+import re
 from typing import Optional
 
 import fitz  # PyMuPDF
@@ -30,6 +26,7 @@ from config import (
     TABLE_AVG_CHARS_THRESHOLD,
     TABLE_BLOCK_COUNT_THRESHOLD,
     TEXT_PREVIEW_LENGTH,
+    CHARS_PER_TOKEN,
 )
 
 logger = logging.getLogger(__name__)
@@ -59,6 +56,11 @@ def run_scout(file_bytes: bytes, filename: str = "document") -> dict:
             "is_scanned":          bool,
             "has_complex_layout":  bool,
             "likely_has_tables":   bool,
+            "doc_type_hint":       str,
+            "estimated_tokens":    int,
+            
+            # Observability
+            "per_page_char_count": list,
         }
     """
     doc = fitz.open(stream=file_bytes, filetype="pdf")
@@ -68,6 +70,7 @@ def run_scout(file_bytes: bytes, filename: str = "document") -> dict:
     total_char_count = 0
     total_block_count = 0
     text_preview: str = ""
+    per_page_char_count = []
 
     for page_num, page in enumerate(doc):
         # Drawing elements (table borders, lines, boxes)
@@ -84,7 +87,9 @@ def run_scout(file_bytes: bytes, filename: str = "document") -> dict:
         total_block_count += len(text_blocks)
 
         page_text = page.get_text("text")
-        total_char_count += len(page_text)
+        chars_on_this_page = len(page_text)
+        total_char_count += chars_on_this_page
+        per_page_char_count.append(chars_on_this_page)
 
         # Capture text preview from page 1 only
         if page_num == 0 and page_text.strip():
@@ -110,6 +115,9 @@ def run_scout(file_bytes: bytes, filename: str = "document") -> dict:
         and total_block_count > TABLE_BLOCK_COUNT_THRESHOLD
     )
 
+    doc_type_hint = _derive_doc_type_hint(text_preview)
+    estimated_tokens = total_char_count // CHARS_PER_TOKEN
+
     page_count = fitz.open(stream=file_bytes, filetype="pdf").page_count
 
     result = {
@@ -124,6 +132,9 @@ def run_scout(file_bytes: bytes, filename: str = "document") -> dict:
         "is_scanned":          is_scanned,
         "has_complex_layout":  has_complex_layout,
         "likely_has_tables":   likely_has_tables,
+        "doc_type_hint":       doc_type_hint,
+        "estimated_tokens":    estimated_tokens,
+        "per_page_char_count": per_page_char_count,
     }
 
     logger.info(
@@ -151,6 +162,27 @@ def _detect_language(text: str) -> str:
         return langdetect_detect(text)
     except Exception:
         return "unknown"
+
+def _derive_doc_type_hint(text_preview: str) -> str:
+    """
+    Keyword match to provide an early heuristic doc_type_hint to the Router and Classifier.
+    """
+    text_lower = text_preview.lower()
+    
+    if re.search(r'\b(invoice|bill\s+to|receipt|remittance)\b', text_lower):
+        return "invoice"
+    if re.search(r'\b(annual\s+report|form\s+10-?k|business\s+review)\b', text_lower):
+        return "annual_report"
+    if re.search(r'\b(bank\s+statement|account\s+statement|account\s+summary|statement\s+of\s+account)\b', text_lower):
+        return "bank_statement"
+    if re.search(r'\b(balance\s+sheet|statement\s+of\s+financial\s+position)\b', text_lower):
+        return "balance_sheet"
+    if re.search(r'\b(agreement|contract|mou|memorandum|terms\s+and\s+conditions)\b', text_lower):
+        return "legal_agreement"
+    if re.search(r'\b(audit\s+report|auditor\'?s\s+opinion|independent\s+auditor)\b', text_lower):
+        return "audit_report"
+        
+    return "unknown"
 
 
 # ---------------------------------------------------------------------------

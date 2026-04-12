@@ -1,32 +1,34 @@
 """
-metadata.py — MVP metadata packet assembly.
+metadata.py — Metadata packet assembly.
 
-Assembles the six fields that directly influence routing and processing decisions
-from scout outputs and parser results. All additional metadata is a Phase B addition.
+Assembles routing and processing fields from scout outputs and parser results.
 """
 
 
 def assemble_metadata(scout_result: dict, parser_result: dict) -> dict:
-    """
-    Build the MVP metadata packet from scout and parser outputs.
-
-    MVP packet — 6 fields:
-        page_count        — drives strategy selection in the router
-        likely_has_tables — influences processing approach for extraction
-        is_scanned        — informs the user about document quality
-        language          — flags non-English documents
-        parser_used       — records which parser ran
-        text_preview      — first N chars for LLM domain awareness in the router
-        parsing_quality   — "normal" | "degraded"
-
-    Returns a flat dict safe to store in SESSIONS and serialise to JSON.
-    """
+    """Build the metadata packet from scout and parser outputs."""
     return {
-        "page_count":        scout_result["page_count"],
-        "likely_has_tables": scout_result["likely_has_tables"],
-        "is_scanned":        scout_result["is_scanned"],
-        "language":          scout_result["language"],
-        "parser_used":       parser_result["parser_used"],
-        "text_preview":      scout_result["text_preview"],
-        "parsing_quality":   parser_result["parsing_quality"],
+        # Router Fields
+        "page_count":          scout_result["page_count"],
+        "likely_has_tables":   scout_result["likely_has_tables"],
+        "text_preview":        scout_result["text_preview"],
+        "doc_type_hint":       scout_result["doc_type_hint"],
+        
+        # Summarizer / Extractor / Classifier Fields
+        "estimated_tokens":    scout_result.get("estimated_tokens", 0),
+        
+        # Parser Factory & UX Flags
+        "is_scanned":          scout_result["is_scanned"],
+        "has_complex_layout":  scout_result["has_complex_layout"],
+        "language":            scout_result["language"],
+        "parsing_quality":     parser_result["parsing_quality"],
+        "parser_used":         parser_result["parser_used"],
+        
+        # Logged Telemetry (Observability)
+        "total_char_count":    scout_result["total_char_count"],
+        "avg_chars_per_block": scout_result["avg_chars_per_block"],
+        "total_block_count":   scout_result["total_block_count"],
+        "total_drawing_count": scout_result["total_drawing_count"],
+        "total_image_count":   scout_result["total_image_count"],
+        "per_page_char_count": scout_result.get("per_page_char_count", []),
     }

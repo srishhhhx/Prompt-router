@@ -18,54 +18,50 @@ load_dotenv()
 # This allows config to be imported during calibration and tests without keys set.
 GROQ_API_KEY: str = os.environ.get("GROQ_API_KEY", "")
 LLAMA_CLOUD_API_KEY: str = os.environ.get("LLAMA_CLOUD_API_KEY", "")
+CEREBRAS_API_KEY: str = os.environ.get("CEREBRAS_API_KEY", "")
 
 # ---------------------------------------------------------------------------
 # Model identifiers
-# ---------------------------------------------------------------------------
+CEREBRAS_MODEL = "qwen-3-235b-a22b-instruct-2507"
+GROQ_70B_MODEL = "llama-3.3-70b-versatile"
+
+# Active usage mappings
 ROUTING_MODEL = "llama-3.1-8b-instant"
-PROCESSING_MODEL = "llama-3.3-70b-versatile"  # llama-3.1-70b-versatile was decommissioned 2025-01
 
 # ---------------------------------------------------------------------------
 # Session settings
 # ---------------------------------------------------------------------------
-SESSION_TTL_SECONDS = 1800          # 30 minutes
+SESSION_TTL_SECONDS = 86400          # 24 hours (86,400 seconds)
 SESSION_CLEANUP_INTERVAL_SECONDS = 300  # Run eviction every 5 minutes
 
 # ---------------------------------------------------------------------------
 # PyMuPDF Scout — routing signal thresholds
-#
-# Calibration run (2026-04-09) against actual test documents:
-#   Document4.pdf (HUL Annual Report, 47pp)
-#     drawing_count=1980, block_count=1245, avg_chars_per_block=117.76, image_count=47
-#   Document5.pdf (IL&FS Cash Flow, 2pp)
-#     drawing_count=396,  block_count=60,   avg_chars_per_block=54.08,  image_count=0
 # ---------------------------------------------------------------------------
 
 # is_scanned: true when the PDF is primarily images with very little embedded text.
-# Both test docs have chars >> 500, so this threshold correctly leaves them as non-scanned.
-SCANNED_CHAR_THRESHOLD = 500        # Calibrated: Doc4=146606, Doc5=3245 — well above
-SCANNED_IMAGE_THRESHOLD = 1         # Calibrated: scanned PDFs typically have ≥1 full-page image
+SCANNED_CHAR_THRESHOLD = 500
+SCANNED_IMAGE_THRESHOLD = 1
 
 # has_complex_layout: true when many drawing elements (table borders, boxes) are present.
-# Doc4=1980 drawings, Doc5=396 drawings — both well above 50, correctly triggering complex path.
-COMPLEX_LAYOUT_DRAWING_THRESHOLD = 50   # Calibrated: both test docs are >= 396; clean digital text ~0-10
+COMPLEX_LAYOUT_DRAWING_THRESHOLD = 50
 
 # likely_has_tables: true when blocks are short and numerous (table cell pattern).
-# Doc5 avg_chars_per_block=54.08 (table-heavy cash flow statement) — catches this correctly.
-# Doc4 avg=117.76 — misses the table flag but has_complex_layout=True handles routing anyway.
-TABLE_AVG_CHARS_THRESHOLD = 80      # Calibrated: Doc5=54.08 (tables), Doc4=117.76 (narrative+tables)
-TABLE_BLOCK_COUNT_THRESHOLD = 30    # Calibrated: Doc5=60 blocks over 2 pages — lowered from 100
+TABLE_AVG_CHARS_THRESHOLD = 80
+TABLE_BLOCK_COUNT_THRESHOLD = 30
 
 # Text preview length (chars from page 1) sent to the router as domain context
 TEXT_PREVIEW_LENGTH = 1000
 
 # ---------------------------------------------------------------------------
-# PII Scrubber — regex patterns (MVP: Aadhaar, PAN, Phone only)
+# PII Scrubber — regex patterns (GSTIN, PAN, IFSC)
 # ---------------------------------------------------------------------------
 PII_PATTERNS = {
-    "AADHAAR": r"\b\d{4}\s?\d{4}\s?\d{4}\b",
-    "PAN":     r"\b[A-Z]{5}\d{4}[A-Z]{1}\b",
-    "PHONE":   r"\b(?:\+91|91|0)?[6-9]\d{9}\b",
+    # GSTIN: 2-digit state code + PAN prefix + entity no + 'Z' + checksum
+    "GSTIN": r"\b[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]\b",
+    # PAN: 5 letters + 4 digits + 1 letter
+    "PAN":   r"\b[A-Z]{5}\d{4}[A-Z]{1}\b",
+    # IFSC: 4 letters + '0' + 6 alphanumeric
+    "IFSC":  r"\b[A-Z]{4}0[A-Z0-9]{6}\b",
 }
 
 # ---------------------------------------------------------------------------
@@ -89,3 +85,23 @@ SUPPORTED_MIME_TYPES = {
     "image/jpg",
 }
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB
+
+# ---------------------------------------------------------------------------
+# Truncation limits
+# ---------------------------------------------------------------------------
+CONTEXT_WINDOW_LIMIT = 12_000
+GROQ_CONTEXT_LIMIT = 4_500
+
+CHARS_PER_TOKEN = 3
+
+HEAD_RATIO = 0.60
+TAIL_RATIO = 0.40
+SNAP_TOLERANCE = 500
+
+GAP_MARKER = "\n\n[... DOCUMENT SECTION OMITTED — DO NOT ASSUME CONTINUITY ...]\n\n"
+
+TRUNCATION_SIGNAL = (
+    "The following text contains two non-contiguous excerpts from a financial "
+    "document. They do not flow linearly. Extract key facts from each section "
+    "independently. Do not infer or assume content in the omitted section.\n\n"
+)

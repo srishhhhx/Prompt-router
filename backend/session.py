@@ -23,7 +23,7 @@ from config import SESSION_TTL_SECONDS, SESSION_CLEANUP_INTERVAL_SECONDS
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Global store — single process only; Redis is a Phase B upgrade.
+# Global store — single-process in-memory dict.
 # ---------------------------------------------------------------------------
 SESSIONS: dict[str, dict] = {}
 

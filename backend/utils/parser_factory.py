@@ -6,15 +6,11 @@ Decision logic (deterministic, no LLM):
                   → use PyMuPDF text directly (fast, zero external dependency)
   - Complex path: any signal is True
                   → try LlamaParse via LlamaCloud REST API (markdown, table-preserving)
-                  → on any failure: try Docling (local, weights load only here)
-                  → on any failure: use raw PyMuPDF text with parsing_quality=degraded
+                  → on failure: try Docling (local)
+                  → on failure: use raw PyMuPDF text with parsing_quality=degraded
 
-LlamaParse implementation uses the LlamaCloud REST API directly (httpx, no SDK)
-so there is zero dependency on llama_index / llama-parse packages. This avoids the
-Python 3.9 incompatibility in llama-index-core ≥ 0.12 (uses X | None union syntax).
-
-Docling weights are NOT loaded at import time. DocumentConverter() is only
-instantiated inside _try_docling(), which is only called when LlamaParse fails.
+LlamaParse uses the LlamaCloud REST API directly (httpx) to avoid SDK
+version conflicts. Docling weights are loaded lazily only when needed.
 """
 
 import asyncio
@@ -102,6 +98,7 @@ async def parse_document(file_bytes: bytes, scout_result: dict, filename: str = 
     }
 
 
+
 # ---------------------------------------------------------------------------
 # PyMuPDF (always available, zero egress)
 # ---------------------------------------------------------------------------
@@ -120,15 +117,7 @@ def _extract_pymupdf(file_bytes: bytes) -> str:
 
 async def _try_llamaparse(file_bytes: bytes, filename: str) -> Optional[str]:
     """
-    Calls the LlamaCloud REST API directly using httpx.
-    No llama-parse / llama-index packages required — eliminates the Python 3.9
-    incompatibility in llama-index-core ≥ 0.12 (X | None union syntax).
-
-    Flow:
-      POST /upload          → job_id
-      GET  /job/{id}        → poll until status == SUCCESS (or timeout)
-      GET  /job/{id}/result/markdown → markdown text
-
+    Upload to LlamaCloud REST API, poll for completion, and return markdown.
     Returns None on any failure so the cascade can continue.
     """
     if not LLAMA_CLOUD_API_KEY:
@@ -216,12 +205,7 @@ async def _try_llamaparse(file_bytes: bytes, filename: str) -> Optional[str]:
 
 async def _try_docling(file_bytes: bytes, filename: str) -> Optional[str]:
     """
-    Parse with Docling (local, markdown output, zero data egress).
-
-    IMPORTANT: Docling model weights are loaded lazily — DocumentConverter() is
-    instantiated inside this function, which is only called when LlamaParse fails.
-    No model loading happens at server startup or on the simple parser path.
-
+    Parse with Docling (local, zero data egress).
     Returns None on any failure so the cascade can continue.
     """
     try:

@@ -43,3 +43,6 @@ logs/
 # Parser tests venv (separate from project)
 parser_tests/venv/
 parser_tests/__pycache__/
+
+# Scratch / debug scripts
+backend/scratch/

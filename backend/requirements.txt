@@ -11,8 +11,10 @@ llama-parse==0.6.26
 docling==2.32.0
 
 # LLM + structured output
+# LLM + structured output + tracing
 groq==0.22.0
 instructor==1.8.3
+langsmith==0.1.125
 
 # Data validation
 pydantic==2.11.1

@@ -15,8 +15,12 @@ export const api = {
     return res.json()
   },
 
-  createSession: async () => {
-    const res = await fetch(`${BASE}/session`, { method: 'POST' })
+  createSession: async (prompt = '') => {
+    const res = await fetch(`${BASE}/session`, { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
+    })
     if (!res.ok) throw new Error(`Session creation failed: ${res.status}`)
     return res.json()
   },

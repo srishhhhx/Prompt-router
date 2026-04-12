@@ -40,9 +40,8 @@ uploads/
 *.log
 logs/
 
-# Parser tests venv (separate from project)
-parser_tests/venv/
-parser_tests/__pycache__/
+# Parser tests (not part of main project)
+parser_tests/
 
 # Scratch / debug scripts
 backend/scratch/

@@ -100,6 +100,8 @@ The project includes a custom evaluation framework (`backend/eval/`) that benchm
 - Token usage and latency waterfall
 - Session-grouped traces for end-to-end request debugging
 
+**Example:** View a [snapshot of system traces](./assets/Langsmith.png) showing the router delegating to specialized modules.
+
 
 ## 6. API Endpoints
 

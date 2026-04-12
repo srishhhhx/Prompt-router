@@ -21,3 +21,7 @@ pydantic==2.11.1
 
 # HTTP client (for LlamaParse async)
 httpx==0.28.1
+
+# Testing
+pytest==8.4.2
+pytest-asyncio==1.2.0

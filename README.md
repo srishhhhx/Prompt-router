@@ -201,6 +201,12 @@ pip install -r requirements.txt
 
 Create a `.env` file in `/backend`:
 ```env
+# Get your keys at:
+# Groq: https://console.groq.com/
+# LlamaCloud: https://cloud.llamaindex.ai/
+# Cerebras: https://cloud.cerebras.ai/
+# LangSmith: https://smith.langchain.com/
+
 GROQ_API_KEY=your_groq_key
 LLAMA_CLOUD_API_KEY=your_llamaparse_key
 CEREBRAS_API_KEY=your_cerebras_key

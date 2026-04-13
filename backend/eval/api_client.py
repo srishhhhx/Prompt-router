@@ -13,9 +13,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+import os
 import httpx
 
-BASE_URL = "http://localhost:8000"
+# ---------------------------------------------------------------------------
+# Config: Deployment & Polling
+# ---------------------------------------------------------------------------
+# Default to localhost for development; override via FDIP_API_URL in production.
+BASE_URL = os.environ.get("FDIP_API_URL", "http://localhost:8000")
+
 POLL_INTERVAL = 2.0    # seconds between /status polls
 POLL_TIMEOUT  = 300.0  # max seconds to wait for parse completion (LlamaParse can be slow)
 

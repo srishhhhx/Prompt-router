@@ -21,9 +21,17 @@ Notes:
   - All times are in seconds; displayed as milliseconds in the report.
 """
 
-from typing import List
+from typing import List, Optional
 
 from eval.api_client import ChatResult, UploadResult
+
+
+async def run() -> dict:
+    """
+    Standard entry point: Latency is a passive metric aggregated from other runs.
+    This function returns a placeholder as it requires external timing data.
+    """
+    return {"status": "passive_metric", "note": "Aggregate via aggregate()"}
 
 
 def record_parse_latency(upload_result: UploadResult) -> dict:

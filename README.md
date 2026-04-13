@@ -2,30 +2,16 @@
 
 ## Table of Contents
 
-- [Financial Document Intelligence Pipeline](#financial-document-intelligence-pipeline)
-  - [Table of Contents](#table-of-contents)
-  - [1. Introduction](#1-introduction)
-  - [2. Demo Video](#2-demo-video)
-  - [3. Architecture](#3-architecture)
-  - [4. Design Decisions](#4-design-decisions)
-    - [Prompt Routing Strategy](#prompt-routing-strategy)
-    - [System Design](#system-design)
-  - [5. Evaluation, Observability \& Tests](#5-evaluation-observability--tests)
-    - [Evaluation Suite](#evaluation-suite)
-    - [Observability](#observability)
-    - [Tests](#tests)
-  - [6. API Endpoints](#6-api-endpoints)
-  - [7. Tech Stack](#7-tech-stack)
-  - [8. Project Structure](#8-project-structure)
-  - [9. Setup](#9-setup)
-    - [Quick Start (Docker)](#quick-start-docker)
-    - [Manual Setup](#manual-setup)
-    - [Prerequisites](#prerequisites)
-    - [Step 1: Clone \& Setup](#step-1-clone--setup)
-    - [Step 2: Backend Setup](#step-2-backend-setup)
-    - [Step 3: Frontend Setup](#step-3-frontend-setup)
-    - [Step 4: Run the Application](#step-4-run-the-application)
-  - [10. Path to Production](#10-path-to-production)
+- [1. Introduction](#1-introduction)
+- [2. Demo Video](#2-demo-video)
+- [3. Architecture](#3-architecture)
+- [4. Design Decisions](#4-design-decisions)
+- [5. Evaluation, Observability & Tests](#5-evaluation-observability--tests)
+- [6. API Endpoints](#6-api-endpoints)
+- [7. Tech Stack](#7-tech-stack)
+- [8. Project Structure](#8-project-structure)
+- [9. Setup](#9-setup)
+- [10. Path to Production](#10-path-to-production)
 
 
 ## 1. Introduction
@@ -158,10 +144,11 @@ Prompt-routing/
 │   ├── schemas/                     # Pydantic response schemas
 │   ├── eval/                        # Evaluation Suite
 │   │   ├── fixtures/                # Ground truth JSON
-│   │   ├── metrics/                 # Routing, PII, fidelity, latency metrics
+│   │   ├── metrics/                 # Routing, PII, groundedness, fidelity, latency metrics
 │   │   ├── run_eval.py              # Live eval runner for PII, fidelity, groundedness, latency
 │   │   └── api_client.py            # SSE client for eval
 │   ├── main.py                      # FastAPI app & route definitions
+│   ├── pipeline.py                  # Background upload processing pipeline
 │   ├── session.py                   # In-memory session store
 │   └── config.py                    # All thresholds, models, and env loading
 ├── parser_tests/                    # Parser comparison outputs

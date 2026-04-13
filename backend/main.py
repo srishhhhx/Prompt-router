@@ -18,22 +18,19 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from config import SUPPORTED_MIME_TYPES, MAX_UPLOAD_BYTES
+from config import SUPPORTED_MIME_TYPES, MAX_UPLOAD_BYTES, CHARS_PER_TOKEN, TEXT_PREVIEW_LENGTH
 from utils.errors import RateLimitExhausted
 from session import (
     create_session,
     get_session,
     update_session_ready,
-    update_session_failed,
     cleanup_expired_sessions,
 )
-from utils.scout import run_scout
-from utils.parser_factory import parse_document
-from utils.pii import scrub_document, sync_prompt_with_tokens, rehydrate, rehydrate_dict
-from utils.metadata import assemble_metadata
+from pipeline import run_phase_a
+from utils.pii import scrub_document, sync_prompt_with_tokens, rehydrate_dict
 from modules.router import route
 from modules.summarizer import summarize_stream
 from modules.extractor import extract
@@ -49,6 +46,47 @@ logging.basicConfig(
     stream=sys.stdout,
 )
 logger = logging.getLogger(__name__)
+
+
+def _build_empty_metadata() -> dict:
+    """Return the baseline metadata packet for sessions without uploaded files."""
+    return {
+        "page_count": 0,
+        "likely_has_tables": False,
+        "text_preview": "",
+        "doc_type_hint": "unknown",
+        "estimated_tokens": 0,
+        "is_scanned": False,
+        "has_complex_layout": False,
+        "language": "en",
+        "parsing_quality": "normal",
+        "parser_used": "none",
+        "total_char_count": 0,
+        "avg_chars_per_block": 0.0,
+        "total_block_count": 0,
+        "total_drawing_count": 0,
+        "total_image_count": 0,
+        "per_page_char_count": [],
+    }
+
+
+def _friendly_error_message(exc: Exception) -> str:
+    """Map backend/provider exceptions to user-facing SSE error messages."""
+    error_message = str(exc)
+    error_str_lower = error_message.lower()
+    if "status_code: 429" in error_str_lower or "429 rate limit" in error_str_lower:
+        return "Our language models are temporarily experiencing high traffic volume. Please wait a moment and try again."
+    if (
+        "status_code: 413" in error_str_lower
+        or "request too large" in error_str_lower
+        or "context_length_exceeded" in error_str_lower
+    ):
+        return "The document payload is too large for the current model processing window. Please try a smaller document."
+    if "status_code: 503" in error_str_lower or "service unavailable" in error_str_lower:
+        return "The AI processing server is temporarily unavailable. Please try again later."
+    if "api_key" in error_str_lower:
+        return "Authentication error: Missing or invalid API key configuration."
+    return error_message
 
 
 # ---------------------------------------------------------------------------
@@ -136,7 +174,7 @@ async def upload(
 
     # ---- Enqueue Phase A as a background task ----
     background_tasks.add_task(
-        _run_phase_a, session_id, file_bytes, filename, content_type
+        run_phase_a, session_id, file_bytes, filename, content_type
     )
 
     logger.info("Upload accepted: %s → session %s", filename, session_id)
@@ -191,32 +229,13 @@ async def create_text_session(request: SessionRequest = SessionRequest()):
     text-only submission), it is scrubbed and stored as the session context.
     """
     session_id = create_session()
-    
-    # Defaults for empty session
+
     scrubbed_text = ""
     token_map = {}
-    meta = {
-        "page_count": 0,
-        "likely_has_tables": False,
-        "text_preview": "",
-        "doc_type_hint": "unknown",
-        "estimated_tokens": 0,
-        "is_scanned": False,
-        "has_complex_layout": False,
-        "language": "en",
-        "parsing_quality": "normal",
-        "parser_used": "none",
-        "total_char_count": 0,
-        "avg_chars_per_block": 0.0,
-        "total_block_count": 0,
-        "total_drawing_count": 0,
-        "total_image_count": 0,
-        "per_page_char_count": [],
-    }
+    meta = _build_empty_metadata()
 
     if request.prompt.strip():
         # Treat the initial prompt as the "document" context for text-only sessions
-        from config import CHARS_PER_TOKEN, TEXT_PREVIEW_LENGTH
         scrub_res = scrub_document(request.prompt)
         scrubbed_text = scrub_res["scrubbed_text"]
         token_map = scrub_res["token_map"]
@@ -366,19 +385,7 @@ async def chat(request: ChatRequest):
             yield f'data: {json.dumps({"type": "error", "message": str(exc)})}\n\n'
         except Exception as exc:
             logger.exception("[%s] Chat pipeline error: %s", sid, exc)
-            
-            # Map ugly pipeline exceptions to user-friendly messages for the frontend UI
-            error_message = str(exc)
-            error_str_lower = error_message.lower()
-            if "status_code: 429" in error_str_lower or "429 rate limit" in error_str_lower:
-                error_message = "Our language models are temporarily experiencing high traffic volume. Please wait a moment and try again."
-            elif "status_code: 413" in error_str_lower or "request too large" in error_str_lower or "context_length_exceeded" in error_str_lower:
-                error_message = "The document payload is too large for the current model processing window. Please try a smaller document."
-            elif "status_code: 503" in error_str_lower or "service unavailable" in error_str_lower:
-                error_message = "The AI processing server is temporarily unavailable. Please try again later."
-            elif "api_key" in error_str_lower:
-                error_message = "Authentication error: Missing or invalid API key configuration."
-
+            error_message = _friendly_error_message(exc)
             yield f'data: {json.dumps({"type": "error", "message": error_message})}\n\n'
             if routing_decision:
                 yield f'data: {json.dumps({"type": "done", "intent": routing_decision.intent, "confidence": 0.0, "parser_used": session["metadata"].get("parser_used"), "flags": ["error"]})}\n\n'
@@ -393,106 +400,3 @@ async def chat(request: ChatRequest):
             "X-Accel-Buffering": "no",
         },
     )
-
-
-# ---------------------------------------------------------------------------
-# Phase A pipeline (runs in background)
-# ---------------------------------------------------------------------------
-async def _run_phase_a(
-    session_id: str,
-    file_bytes: bytes,
-    filename: str,
-    content_type: str,
-) -> None:
-    """
-    Full Phase A sequence:
-        1. PyMuPDF Scout (full document scan)
-        2. Parser routing decision  →  select simple or complex path
-        3. Execute selected parser (LlamaParse / Docling / PyMuPDF)
-        4. PII scrubber  →  build token map
-        5. Metadata packet assembly
-        6. Update session to 'ready'
-
-    On any unhandled exception: update session to 'failed' with a reason string.
-    """
-    try:
-        t0 = time.perf_counter()
-
-        # Step 1: Scout
-        if content_type in ("image/png", "image/jpeg", "image/jpg"):
-            logger.info("[%s] Phase A step 1: Image upload detected — skipping PyMuPDF Scout.", session_id)
-            scout_result = {
-                "page_count": 1,
-                "is_scanned": True,
-                "has_complex_layout": True,
-                "likely_has_tables": True,
-                "doc_type_hint": "unknown",
-                "text_preview": "",  # Populated after parsing
-                "language": "en",
-                "total_char_count": 0,
-                "avg_chars_per_block": 0.0,
-                "total_block_count": 0,
-                "total_drawing_count": 0,
-                "total_image_count": 1,
-                "per_page_char_count": [0],
-                "estimated_tokens": 0,
-            }
-        else:
-            t_scout = time.perf_counter()
-            logger.info("[%s] Phase A step 1: PyMuPDF Scout", session_id)
-            scout_result = run_scout(file_bytes, filename=filename)
-            logger.info("[%s] Scout: %.0f ms", session_id, (time.perf_counter() - t_scout) * 1000)
-
-        # Step 2+3: Parser routing + execution
-        t_parse = time.perf_counter()
-        logger.info("[%s] Phase A step 2-3: Parser factory", session_id)
-        parser_result = await parse_document(file_bytes, scout_result, filename=filename)
-        logger.info(
-            "[%s] Parsing: %.0f ms | parser=%s quality=%s",
-            session_id,
-            (time.perf_counter() - t_parse) * 1000,
-            parser_result["parser_used"],
-            parser_result["parsing_quality"],
-        )
-
-        # Backfill scout metadata for images using the parsed text
-        if content_type in ("image/png", "image/jpeg", "image/jpg"):
-            from config import TEXT_PREVIEW_LENGTH, CHARS_PER_TOKEN
-            parsed_len = len(parser_result["parsed_text"])
-            scout_result["text_preview"] = parser_result["parsed_text"][:TEXT_PREVIEW_LENGTH]
-            scout_result["total_char_count"] = parsed_len
-            scout_result["estimated_tokens"] = parsed_len // CHARS_PER_TOKEN
-            
-        # Step 4: PII scrubbing
-        t_pii = time.perf_counter()
-        logger.info("[%s] Phase A step 4: PII scrubber (GSTIN, PAN, IFSC)", session_id)
-        scrub_result = scrub_document(parser_result["parsed_text"])
-        token_map = scrub_result["token_map"]
-        logger.info("[%s] PII scrub: %.0f ms | %d token(s) found",
-                    session_id, (time.perf_counter() - t_pii) * 1000, len(token_map))
-        if token_map:
-            pii_display = " | ".join(
-                f"{token} → {value}" for token, value in token_map.items()
-            )
-            logger.info("[%s] [PII] PII map: %s", session_id, pii_display)
-        else:
-            logger.info("[%s] [PII] PII map: (none detected)", session_id)
-
-        # Step 5: Metadata assembly
-        metadata = assemble_metadata(scout_result, parser_result)
-
-        # Step 6: Mark session ready
-        update_session_ready(
-            session_id,
-            metadata=metadata,
-            scrubbed_text=scrub_result["scrubbed_text"],
-            token_map=token_map,
-        )
-        total_ms = (time.perf_counter() - t0) * 1000
-        logger.info("[%s] Phase A complete — %.0f ms total | parser=%s",
-                    session_id, total_ms, parser_result["parser_used"])
-
-    except Exception as exc:
-        error_msg = f"{type(exc).__name__}: {exc}"
-        logger.exception("[%s] Phase A failed: %s", session_id, error_msg)
-        update_session_failed(session_id, error=error_msg)

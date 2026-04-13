@@ -25,7 +25,9 @@ from typing import List, Optional
 
 import httpx
 
-# Add backend to path so we can import utils directly
+# ---------------------------------------------------------------------------
+# Config: Constants & Paths
+# ---------------------------------------------------------------------------
 BACKEND_ROOT = Path(__file__).parents[2]
 sys.path.insert(0, str(BACKEND_ROOT))
 
@@ -33,6 +35,29 @@ from utils.pii import scrub_document
 from eval.api_client import send_chat
 
 LLAMAPARSE_DIR = Path(__file__).parents[3] / "parser_tests" / "Parsed" / "llamaparse"
+
+DEFAULT_COOLDOWN = 10.0
+
+
+async def run(
+    doc_id: str,
+    session_id: str,
+    expected_pii: List[dict],
+    client: httpx.AsyncClient,
+    cooldown_s: float = DEFAULT_COOLDOWN,
+) -> dict:
+    """
+    Standard entry point: Runs both scrub and rehydration checks for a document.
+    """
+    scrub_result = run_scrub_check(doc_id, expected_pii)
+    reh_result = await run_rehydration_check(
+        doc_id, session_id, expected_pii, client, cooldown_s
+    )
+    return {
+        "doc_id": doc_id,
+        "scrub": scrub_result,
+        "rehydration": reh_result,
+    }
 
 
 def _load_llamaparse_text(doc_id: str) -> Optional[str]:

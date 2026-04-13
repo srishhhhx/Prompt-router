@@ -1,3 +1,10 @@
+"""
+eval/metrics/routing_accuracy.py — Intent Routing Accuracy.
+
+Evaluates the Groq 8B router against the golden dataset, calculating
+precision, recall, and F1-score per intent.
+"""
+
 import asyncio
 import json
 import logging
@@ -154,25 +161,35 @@ async def run() -> dict | None:
         **aggregate(results),
     }
 
-    # Save Report
+    report_path = _save_report(final_report)
+    _print_summary(final_report, report_path)
+
+    return final_report
+
+
+def _save_report(report: dict) -> Path:
+    """Save the final report to the results directory."""
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     report_path = RESULTS_DIR / f"routing_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     with open(report_path, "w") as f:
-        json.dump(final_report, f, indent=2)
+        json.dump(report, f, indent=2)
+    return report_path
 
-    # Print Summary Table
+
+def _print_summary(report: dict, report_path: Path):
+    """Format and print the accuracy metrics to the console."""
     print("\n" + "="*60)
     print(f"ROUTING ACCURACY REPORT - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("="*60)
-    print(f"Overall Accuracy: {final_report['overall_accuracy']:.4f}")
-    print(f"Macro F1-Score:   {final_report['macro_f1']:.4f}")
+    print(f"Overall Accuracy: {report['overall_accuracy']:.4f}")
+    print(f"Macro F1-Score:   {report['macro_f1']:.4f}")
     print("-" * 60)
     print(f"{'Intent':<15} | {'Prec':<8} | {'Rec':<8} | {'F1':<8} | {'Count':<5}")
     print("-" * 60)
-    for it, metrics in final_report["per_intent"].items():
+    for it, metrics in report["per_intent"].items():
         print(f"{it:<15} | {metrics['precision']:<8.4f} | {metrics['recall']:<8.4f} | {metrics['f1']:<8.4f} | {metrics['count']:<5}")
     print("="*60)
     print(f"Full report saved to: {report_path}\n")
-    return final_report
 
 if __name__ == "__main__":
     asyncio.run(run())

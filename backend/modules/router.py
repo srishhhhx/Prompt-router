@@ -45,16 +45,16 @@ DOCUMENT METADATA (use this to inform your decision):
 {metadata_block}
 
 INTENT DEFINITIONS:
-- extraction    : User wants to pull data, facts, or tables out of the document. \
-This includes single-field asks ("what is the PAN number?"), multi-field asks \
-("list all IFSC codes"), table pulls ("show me all transactions"), and broad \
-data requests ("extract all financial figures", "what are the line items"). \
+- extraction    : User wants to pull specific numeric data, facts, or tables out \
+of the document. This includes single-field asks ("what is the PAN number?"), \
+multi-field asks ("list all IFSC codes"), and table pulls ("show me all transactions"). \
 Keywords: extract, find, what is, show me, get, list, how much, what are, \
-is there, who is, transactions, numbers.
-- summarization : User wants a narrative paragraph explaining what the document \
-is about, or a high-level conceptual overview. Do NOT use this for pulling \
-tabular data or a list of transactions. Keywords: summarize, overview, key \
-themes, explain, describe, what happened, narrative, brief.
+transactions, numbers, data.
+- summarization : User wants a narrative paragraph conveying what the document \
+is about, a high-level overview, bullet points of findings, or explanations of \
+terms. Even for tabular documents, if the user asks for a general "summary" or "overview" \
+without specifying tabular data, map this to summarization. Keywords: summarize, \
+overview, key themes, bullet points, explain, describe, findings, clauses, terms.
 - classification: User wants to know the category or type of the document. \
 Keywords: what type, what kind, classify, identify, categorise, what is this.
 
@@ -65,25 +65,24 @@ Prompt: "Give me a summary of all transactions in this bank statement"
 'summary', they are asking for a list of transactions (data points). Pushing \
 this to extraction will pull the tabular data."
 
-Prompt: "What type of document is this?"
-→ intent=classification, confidence=0.98, reasoning="User is asking to identify \
-the document's category."
+Prompt: "Summarise this bank statement for me"
+→ intent=summarization, confidence=0.94, reasoning="The user is asking for \
+a general, high-level narrative overview of the statement, not specific transactions."
 
-Prompt: "Summarise the cash flows in this document"
-→ intent=extraction, confidence=0.88, reasoning="Cash flows are tabular line \
-items. The user wants the data extracted, not a narrative."
+Prompt: "Provide a high-level overview of the company's cash movement"
+→ intent=summarization, confidence=0.93, reasoning="User wants a conceptual \
+narrative overview, not a line-by-line data extraction."
 
-Prompt: "Provide a brief narrative summary of the management discussion"
+Prompt: "Summarize the shipping and trade terms mentioned here"
 → intent=summarization, confidence=0.96, reasoning="User explicitly wants a \
-narrative text summary, not a tabular extraction."
+narrative text summary of clauses/terms, not tabular data."
 
 Prompt: "What is the debit amount for the ANMOL PALACE transaction?"
 → intent=extraction, confidence=0.99, reasoning="Direct query for a specific \
 data point."
 
 Now classify the following prompt. Use the document metadata (especially page_count, \
-likely_has_tables, and doc_type_hint) to resolve any ambiguity. Route to extraction \
-for any prompt asking for a specific field or value, even a single one.\
+likely_has_tables, and doc_type_hint) to resolve any ambiguity.\
 """
 
 

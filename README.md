@@ -8,11 +8,23 @@
   - [2. Demo Video](#2-demo-video)
   - [3. Architecture](#3-architecture)
   - [4. Design Decisions](#4-design-decisions)
+    - [Prompt Routing Strategy](#prompt-routing-strategy)
+    - [System Design](#system-design)
   - [5. Evaluation, Observability \& Tests](#5-evaluation-observability--tests)
+    - [Evaluation Suite](#evaluation-suite)
+    - [Observability](#observability)
+    - [Tests](#tests)
   - [6. API Endpoints](#6-api-endpoints)
   - [7. Tech Stack](#7-tech-stack)
   - [8. Project Structure](#8-project-structure)
   - [9. Setup](#9-setup)
+    - [Quick Start (Docker)](#quick-start-docker)
+    - [Manual Setup](#manual-setup)
+    - [Prerequisites](#prerequisites)
+    - [Step 1: Clone \& Setup](#step-1-clone--setup)
+    - [Step 2: Backend Setup](#step-2-backend-setup)
+    - [Step 3: Frontend Setup](#step-3-frontend-setup)
+    - [Step 4: Run the Application](#step-4-run-the-application)
   - [10. Path to Production](#10-path-to-production)
 
 
@@ -69,16 +81,17 @@ The pipeline further includes automatic PII tokenization and rehydration, adapti
 
 ### Evaluation Suite
 
-The project includes a custom evaluation framework (`backend/eval/`) that benchmarks four metrics across six diverse financial documents:
+The project includes a custom evaluation framework (`backend/eval/`) that benchmarks routing separately and four live pipeline metrics across six diverse financial documents:
 
-| Metric | What It Measures | Target |
+| Metric | What It Measures | Achieved |
 |---|---|---|
-| **Intent Routing Accuracy** | Correct classification of prompts into extraction / summarization / classification | ≥ 95% |
-| **PII Safety Score** | Scrub recall (were all PII tokens caught?) + Rehydration success (were they restored correctly?) | 100% |
-| **Extraction Fidelity** | Exact and fuzzy numeric match between extracted values and ground truth | ≥ 90% |
-| **Pipeline Latency** | Time-to-first-token (TTFT) and end-to-end response time | TTFT < 800ms |
+| **Intent Routing Accuracy** | Correct classification of prompts into extraction/summarization/classification | **96.0%** |
+| **PII Safety Score** | Lifecycle integrity, scrub recall, and token rehydration | **100.0%** |
+| **Extraction Groundedness** | Faithfulness of extracted answers to the source document | **88.0%** |
+| **Extraction Fidelity** | Exact and numeric value accuracy against ground truth | **84.0%** |
+| **Pipeline Latency (Avg)** | Time-to-first-token (TTFT) perceived responsiveness | **1194 ms** |
 
-**Fast Evaluation Mode:** Pre-parsed LlamaParse markdown files are injected directly via `/internal/inject-session`, bypassing the upload and parsing phases entirely. This enables rapid iteration on prompt tuning and routing logic without incurring LlamaParse API costs or wait times.
+For a detailed breakdown of methodology, intent-level metrics, and latency percentiles, see [Evaluation Details](./backend/eval/Evals.md).
 
 ### Observability
 
@@ -91,7 +104,7 @@ The project includes a custom evaluation framework (`backend/eval/`) that benchm
 
 ### Tests
 
-The backend includes a formal test suite covering core utility operations and API endpoints, maintaining a strict boundary from the LLM observability evaluation routines. Please see [Tests.md](./Tests.md) for detailed analysis and execution results.
+The backend includes a formal test suite covering core utility operations and API endpoints, maintaining a strict boundary from the LLM observability evaluation routines. Please see [Tests.md](./backend/tests/Tests.md) for detailed analysis and execution results.
 
 
 ## 6. API Endpoints
@@ -103,7 +116,6 @@ The backend includes a formal test suite covering core utility operations and AP
 | `GET` | `/status/{session_id}` | Poll for document processing status. Returns `processing`, `ready`, or `failed` with metadata. |
 | `POST` | `/session` | Creates a text-only session (no document). Returns an immediately-ready `session_id`. |
 | `POST` | `/chat` | Main query endpoint. Accepts `{session_id, prompt}`. Returns an SSE stream of token events and a terminal `done` event with routing metadata. |
-| `POST` | `/internal/inject-session` | Eval-only. Injects pre-parsed markdown directly, bypassing Scout and the parser cascade. |
 
 
 ## 7. Tech Stack
@@ -147,7 +159,7 @@ Prompt-routing/
 │   ├── eval/                        # Evaluation Suite
 │   │   ├── fixtures/                # Ground truth JSON
 │   │   ├── metrics/                 # Routing, PII, fidelity, latency metrics
-│   │   ├── run_eval_fast.py         # Fast eval runner (pre-parsed injection)
+│   │   ├── run_eval.py              # Live eval runner for PII, fidelity, groundedness, latency
 │   │   └── api_client.py            # SSE client for eval
 │   ├── main.py                      # FastAPI app & route definitions
 │   ├── session.py                   # In-memory session store

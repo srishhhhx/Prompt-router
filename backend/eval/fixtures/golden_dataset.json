@@ -1,0 +1,152 @@
+[
+  {
+    "doc_id": "Document1.pdf",
+    "prompt": "What is the PAN number of the proprietor?",
+    "expected_intent": "extraction",
+    "reasoning": "Direct query for a specific identifier."
+  },
+  {
+    "doc_id": "Document1.pdf",
+    "prompt": "Give me a summary of this proprietor's financial position.",
+    "expected_intent": "summarization",
+    "reasoning": "Explicit request for a summary/overview."
+  },
+  {
+    "doc_id": "Document1.pdf",
+    "prompt": "What is the net profit for the year?",
+    "expected_intent": "extraction",
+    "reasoning": "Specific financial figure extraction."
+  },
+  {
+    "doc_id": "Document2.pdf",
+    "prompt": "Extract all line items and their unit prices into a table.",
+    "expected_intent": "extraction",
+    "reasoning": "Tabular data extraction request."
+  },
+  {
+    "doc_id": "Document2.pdf",
+    "prompt": "What kind of document is this?",
+    "expected_intent": "classification",
+    "reasoning": "Document type identification."
+  },
+  {
+    "doc_id": "Document2.pdf",
+    "prompt": "Summarize the shipping and trade terms mentioned here.",
+    "expected_intent": "summarization",
+    "reasoning": "Narrative summary of specific clauses."
+  },
+  {
+    "doc_id": "Document3.pdf",
+    "prompt": "What is the auditor's opinion on the financial statements?",
+    "expected_intent": "extraction",
+    "reasoning": "Pulling a specific qualitative finding/statement."
+  },
+  {
+    "doc_id": "Document3.pdf",
+    "prompt": "Classify this document.",
+    "expected_intent": "classification",
+    "reasoning": "Explicit classification request."
+  },
+  {
+    "doc_id": "Document3.pdf",
+    "prompt": "Give me a 3-bullet summary of the audit findings.",
+    "expected_intent": "summarization",
+    "reasoning": "Brief overview of findings."
+  },
+  {
+    "doc_id": "Document4.pdf",
+    "prompt": "How much was the total equity in 2018?",
+    "expected_intent": "extraction",
+    "reasoning": "Specific numeric extraction from an annual report."
+  },
+  {
+    "doc_id": "Document4.pdf",
+    "prompt": "Summarize the management discussion and analysis section.",
+    "expected_intent": "summarization",
+    "reasoning": "Overview of a large narrative section."
+  },
+  {
+    "doc_id": "Document4.pdf",
+    "prompt": "Identify if this is an annual report or a quarterly statement.",
+    "expected_intent": "classification",
+    "reasoning": "Intent to classify document category."
+  },
+  {
+    "doc_id": "Document4.pdf",
+    "prompt": "Summarize all the subsidiary companies listed.",
+    "expected_intent": "extraction",
+    "reasoning": "Tricky: 'Summarize' used for a list of entities (extraction)."
+  },
+  {
+    "doc_id": "Document5.pdf",
+    "prompt": "What was the net cash from operating activities?",
+    "expected_intent": "extraction",
+    "reasoning": "Data point from cash flow statement."
+  },
+  {
+    "doc_id": "Document5.pdf",
+    "prompt": "Provide a high-level overview of the company's cash movement.",
+    "expected_intent": "summarization",
+    "reasoning": "Conceptual overview request."
+  },
+  {
+    "doc_id": "Document5.pdf",
+    "prompt": "Is this a bank statement or a cash flow statement?",
+    "expected_intent": "classification",
+    "reasoning": "Categorization between two types."
+  },
+  {
+    "doc_id": "Document6.pdf",
+    "prompt": "Show me the last 5 transactions in a table.",
+    "expected_intent": "extraction",
+    "reasoning": "Tabular data pull."
+  },
+  {
+    "doc_id": "Document6.pdf",
+    "prompt": "Identify the account holder name and account number.",
+    "expected_intent": "extraction",
+    "reasoning": "Extraction of specific PII-sensitive fields."
+  },
+  {
+    "doc_id": "Document6.pdf",
+    "prompt": "What type of financial record is this?",
+    "expected_intent": "classification",
+    "reasoning": "Document type identification."
+  },
+  {
+    "doc_id": "Document6.pdf",
+    "prompt": "Summarize all payments made to Zomato.",
+    "expected_intent": "extraction",
+    "reasoning": "Tricky: 'Summarize' used for data points (extraction)."
+  },
+  {
+    "doc_id": "Document1.pdf",
+    "prompt": "Categorize this file.",
+    "expected_intent": "classification",
+    "reasoning": "Synonym for classify."
+  },
+  {
+    "doc_id": "Document3.pdf",
+    "prompt": "What is the UDIN mentioned in the report?",
+    "expected_intent": "extraction",
+    "reasoning": "Specific identifier extraction."
+  },
+  {
+    "doc_id": "Document4.pdf",
+    "prompt": "What are the key themes and highlights for the year?",
+    "expected_intent": "summarization",
+    "reasoning": "Conceptual themes (summarization)."
+  },
+  {
+    "doc_id": "Document6.pdf",
+    "prompt": "Summarise this bank statement for me.",
+    "expected_intent": "summarization",
+    "reasoning": "Direct request for narrative summary."
+  },
+  {
+    "doc_id": "Document2.pdf",
+    "prompt": "How much is the total amount due in GBP?",
+    "expected_intent": "extraction",
+    "reasoning": "Specific numeric field extraction."
+  }
+]

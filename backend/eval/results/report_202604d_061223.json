@@ -1,0 +1,278 @@
+{
+  "timestamp": "2026-04-13T06:12:23.811702",
+  "total_queries": 25,
+  "overall_accuracy": 0.96,
+  "macro_f1": 0.9599,
+  "per_intent": {
+    "extraction": {
+      "precision": 1.0,
+      "recall": 0.9167,
+      "f1": 0.9565,
+      "count": 12
+    },
+    "summarization": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "count": 7
+    },
+    "classification": {
+      "precision": 0.8571,
+      "recall": 1.0,
+      "f1": 0.9231,
+      "count": 6
+    }
+  },
+  "results": [
+    {
+      "doc_id": "Document1.pdf",
+      "prompt": "What is the PAN number of the proprietor?",
+      "expected": "extraction",
+      "predicted": "extraction",
+      "correct": true,
+      "confidence": 0.995,
+      "reasoning": "User directly asks for a specific number, matching the defined keywords for the extraction intent.",
+      "latency_ms": 366.25179200000014
+    },
+    {
+      "doc_id": "Document1.pdf",
+      "prompt": "Give me a summary of this proprietor's financial position.",
+      "expected": "summarization",
+      "predicted": "summarization",
+      "correct": true,
+      "confidence": 0.95,
+      "reasoning": "The user is asking for a general, high-level narrative overview of the financial position without specifying any data extraction or categorization.",
+      "latency_ms": 262.28924999999936
+    },
+    {
+      "doc_id": "Document1.pdf",
+      "prompt": "What is the net profit for the year?",
+      "expected": "extraction",
+      "predicted": "extraction",
+      "correct": true,
+      "confidence": 0.95,
+      "reasoning": "The user asks for a specific numeric data point, 'net profit', for the year, which hints at a data extraction task.",
+      "latency_ms": 301.9322090000003
+    },
+    {
+      "doc_id": "Document2.pdf",
+      "prompt": "Extract all line items and their unit prices into a table.",
+      "expected": "extraction",
+      "predicted": "extraction",
+      "correct": true,
+      "confidence": 0.99,
+      "reasoning": "The user explicitly asks for the line items and their unit prices, which suggests a table extraction task.",
+      "latency_ms": 341.55062499999997
+    },
+    {
+      "doc_id": "Document2.pdf",
+      "prompt": "What kind of document is this?",
+      "expected": "classification",
+      "predicted": "classification",
+      "correct": true,
+      "confidence": 1.0,
+      "reasoning": "User's direct question indicates a desire for document categorization.",
+      "latency_ms": 336.8960420000029
+    },
+    {
+      "doc_id": "Document2.pdf",
+      "prompt": "Summarize the shipping and trade terms mentioned here.",
+      "expected": "summarization",
+      "predicted": "summarization",
+      "correct": true,
+      "confidence": 0.95,
+      "reasoning": "User explicitly wants a narrative text summary of clauses/terms, not tabular data.",
+      "latency_ms": 218.78316600000147
+    },
+    {
+      "doc_id": "Document3.pdf",
+      "prompt": "What is the auditor's opinion on the financial statements?",
+      "expected": "extraction",
+      "predicted": "classification",
+      "correct": false,
+      "confidence": 0.8,
+      "reasoning": "The user is asking for the auditor's opinion which suggests they want to know the type or category of the document, particularly if it's the auditor's report.",
+      "latency_ms": 529.9360420000028
+    },
+    {
+      "doc_id": "Document3.pdf",
+      "prompt": "Classify this document.",
+      "expected": "classification",
+      "predicted": "classification",
+      "correct": true,
+      "confidence": 0.98,
+      "reasoning": "The user is likely only asking for the category or type of the document, and not seeking to pull specific numeric data or get an overview of its content.",
+      "latency_ms": 520.8506670000048
+    },
+    {
+      "doc_id": "Document3.pdf",
+      "prompt": "Give me a 3-bullet summary of the audit findings.",
+      "expected": "summarization",
+      "predicted": "summarization",
+      "correct": true,
+      "confidence": 0.94,
+      "reasoning": "User is asking for a general, high-level narrative overview of the audit findings, not specific data points.",
+      "latency_ms": 272.2466250000011
+    },
+    {
+      "doc_id": "Document4.pdf",
+      "prompt": "How much was the total equity in 2018?",
+      "expected": "extraction",
+      "predicted": "extraction",
+      "correct": true,
+      "confidence": 0.9,
+      "reasoning": "Direct query for a specific numeric data point, 'total equity', indicating extraction",
+      "latency_ms": 271.8041250000027
+    },
+    {
+      "doc_id": "Document4.pdf",
+      "prompt": "Summarize the management discussion and analysis section.",
+      "expected": "summarization",
+      "predicted": "summarization",
+      "correct": true,
+      "confidence": 0.95,
+      "reasoning": "The user is explicitly asking for a high-level summary of the management discussion and analysis section, which implies a narrative text summary rather than extracting specific data points.",
+      "latency_ms": 267.6170000000013
+    },
+    {
+      "doc_id": "Document4.pdf",
+      "prompt": "Identify if this is an annual report or a quarterly statement.",
+      "expected": "classification",
+      "predicted": "classification",
+      "correct": true,
+      "confidence": 0.99,
+      "reasoning": "The doc_type_hint in the metadata explicitly mentions 'annual_report'.",
+      "latency_ms": 345.130417
+    },
+    {
+      "doc_id": "Document4.pdf",
+      "prompt": "Summarize all the subsidiary companies listed.",
+      "expected": "extraction",
+      "predicted": "extraction",
+      "correct": true,
+      "confidence": 0.78,
+      "reasoning": "The request implies extracting specific data (subsidiary companies)",
+      "latency_ms": 335.92887500000757
+    },
+    {
+      "doc_id": "Document5.pdf",
+      "prompt": "What was the net cash from operating activities?",
+      "expected": "extraction",
+      "predicted": "extraction",
+      "correct": true,
+      "confidence": 0.95,
+      "reasoning": "User is directly asking for a specific, numeric piece of information (cash flow data point).",
+      "latency_ms": 268.37820800000145
+    },
+    {
+      "doc_id": "Document5.pdf",
+      "prompt": "Provide a high-level overview of the company's cash movement.",
+      "expected": "summarization",
+      "predicted": "summarization",
+      "correct": true,
+      "confidence": 0.92,
+      "reasoning": "User wants a conceptual narrative overview of the company's cash movement, not a line-by-line data extraction.",
+      "latency_ms": 495.4294579999896
+    },
+    {
+      "doc_id": "Document5.pdf",
+      "prompt": "Is this a bank statement or a cash flow statement?",
+      "expected": "classification",
+      "predicted": "classification",
+      "correct": true,
+      "confidence": 0.92,
+      "reasoning": "The document appears to be a cash flow statement based on the text preview, which mentions 'CASH FLOW STATEMENT' in a prominent position.",
+      "latency_ms": 427.81387500001244
+    },
+    {
+      "doc_id": "Document6.pdf",
+      "prompt": "Show me the last 5 transactions in a table.",
+      "expected": "extraction",
+      "predicted": "extraction",
+      "correct": true,
+      "confidence": 0.85,
+      "reasoning": "Direct query for tabular data, as implied by 'show me the last 5 transactions in a table'.",
+      "latency_ms": 276.3659579999995
+    },
+    {
+      "doc_id": "Document6.pdf",
+      "prompt": "Identify the account holder name and account number.",
+      "expected": "extraction",
+      "predicted": "extraction",
+      "correct": true,
+      "confidence": 1.0,
+      "reasoning": "User explicitly wants to pull specific numeric data (account holder name and account number) from the document.",
+      "latency_ms": 2618.6323750000042
+    },
+    {
+      "doc_id": "Document6.pdf",
+      "prompt": "What type of financial record is this?",
+      "expected": "classification",
+      "predicted": "classification",
+      "correct": true,
+      "confidence": 1.0,
+      "reasoning": "The user is asking a question about the category or type of the document, which directly aligns with the classification intent.",
+      "latency_ms": 3335.7668750000043
+    },
+    {
+      "doc_id": "Document6.pdf",
+      "prompt": "Summarize all payments made to Zomato.",
+      "expected": "extraction",
+      "predicted": "extraction",
+      "correct": true,
+      "confidence": 0.85,
+      "reasoning": "Although the user says 'summarize', they are asking for a list of transactions (data points related to payments) which falls under extraction.",
+      "latency_ms": 4480.653667000013
+    },
+    {
+      "doc_id": "Document1.pdf",
+      "prompt": "Categorize this file.",
+      "expected": "classification",
+      "predicted": "classification",
+      "correct": true,
+      "confidence": 0.99,
+      "reasoning": "Direct query is made for category or type, with 'Categorize' and 'classify' keywords.",
+      "latency_ms": 4418.116249999997
+    },
+    {
+      "doc_id": "Document3.pdf",
+      "prompt": "What is the UDIN mentioned in the report?",
+      "expected": "extraction",
+      "predicted": "extraction",
+      "correct": true,
+      "confidence": 0.95,
+      "reasoning": "User is asking for a specific numeric data point mentioned in the document.",
+      "latency_ms": 4294.332499999996
+    },
+    {
+      "doc_id": "Document4.pdf",
+      "prompt": "What are the key themes and highlights for the year?",
+      "expected": "summarization",
+      "predicted": "summarization",
+      "correct": true,
+      "confidence": 0.95,
+      "reasoning": "The user is asking for a high-level narrative overview of the year, not specific numeric data or categories.",
+      "latency_ms": 3387.8184589999873
+    },
+    {
+      "doc_id": "Document6.pdf",
+      "prompt": "Summarise this bank statement for me.",
+      "expected": "summarization",
+      "predicted": "summarization",
+      "correct": true,
+      "confidence": 0.94,
+      "reasoning": "The user is asking for a general, high-level narrative overview of the statement, not specific transactions.",
+      "latency_ms": 27491.461915999993
+    },
+    {
+      "doc_id": "Document2.pdf",
+      "prompt": "How much is the total amount due in GBP?",
+      "expected": "extraction",
+      "predicted": "extraction",
+      "correct": true,
+      "confidence": 1.0,
+      "reasoning": "Direct query for a specific numeric data point, total amount due.",
+      "latency_ms": 2472.396292000013
+    }
+  ]
+}

@@ -47,4 +47,4 @@ parser_tests/
 backend/scratch/
 
 # Evaluation suite
-backend/eval/
+#backend/eval/

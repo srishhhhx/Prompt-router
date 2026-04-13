@@ -7,7 +7,6 @@ Endpoints:
     GET  /status/{sid}        → poll processing status
     POST /session             → create text-only session
     POST /chat                → SSE streaming response
-    POST /internal/inject-session → eval-only session injection
 """
 
 import asyncio
@@ -236,80 +235,6 @@ async def create_text_session(request: SessionRequest = SessionRequest()):
     logger.info("Text-only session created: %s (context_len=%d)", 
                 session_id, len(scrubbed_text))
     return {"session_id": session_id, "status": "ready"}
-
-
-# ---------------------------------------------------------------------------
-# POST /internal/inject-session  →  eval-only fast-path (skips upload+parse)
-# ---------------------------------------------------------------------------
-
-class InjectSessionRequest(BaseModel):
-    doc_id: str                     # e.g. "Document1"
-    filename: str                   # e.g. "Document1.pdf"
-    markdown_text: str              # pre-parsed LlamaParse markdown content
-    page_count: int = 0
-    doc_type_hint: str = "unknown"
-    likely_has_tables: bool = True
-
-
-@app.post("/internal/inject-session", status_code=201)
-async def inject_session(request: InjectSessionRequest):
-    """
-    Eval-only endpoint: accepts pre-parsed markdown text, runs PII scrubbing,
-    and creates a ready session — bypassing Scout and the parser cascade.
-
-    Use this to speed up eval runs when LlamaParse outputs are already cached.
-    NOT intended for production use.
-    """
-    from config import CHARS_PER_TOKEN, TEXT_PREVIEW_LENGTH
-
-    session_id = create_session()
-
-    # PII scrubbing — same logic as Phase A step 4
-    t_pii = time.perf_counter()
-    scrub_result = scrub_document(request.markdown_text)
-    token_map = scrub_result["token_map"]
-    pii_ms = (time.perf_counter() - t_pii) * 1000
-    logger.info("[inject:%s] PII scrub: %.0f ms | %d token(s) found",
-                request.doc_id, pii_ms, len(token_map))
-    if token_map:
-        pii_display = " | ".join(f"{t} → {v}" for t, v in token_map.items())
-        logger.info("[inject:%s] [PII] PII map: %s", request.doc_id, pii_display)
-
-    char_count = len(request.markdown_text)
-    metadata = {
-        "page_count":          request.page_count,
-        "likely_has_tables":   request.likely_has_tables,
-        "text_preview":        request.markdown_text[:TEXT_PREVIEW_LENGTH],
-        "doc_type_hint":       request.doc_type_hint,
-        "estimated_tokens":    char_count // CHARS_PER_TOKEN,
-        "is_scanned":          False,
-        "has_complex_layout":  True,
-        "language":            "en",
-        "parsing_quality":     "normal",
-        "parser_used":         "llamaparse",  # source of truth for injected sessions
-        "total_char_count":    char_count,
-        "avg_chars_per_block": 0.0,
-        "total_block_count":   0,
-        "total_drawing_count": 0,
-        "total_image_count":   0,
-        "per_page_char_count": [],
-    }
-
-    update_session_ready(
-        session_id,
-        metadata=metadata,
-        scrubbed_text=scrub_result["scrubbed_text"],
-        token_map=token_map,
-    )
-    logger.info("[inject:%s] Session ready: %s | pii_tokens=%d",
-                request.doc_id, session_id, len(token_map))
-
-    return {
-        "session_id":     session_id,
-        "status":         "ready",
-        "pii_tokens_found": len(token_map),
-        "pii_token_types": [k.split("_")[0] for k in token_map.values()] if token_map else [],
-    }
 
 
 # ---------------------------------------------------------------------------

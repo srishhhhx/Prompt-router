@@ -1,0 +1,370 @@
+{
+  "documents": [
+    {
+      "id": "Document1",
+      "filename": "Document1.pdf",
+      "document_type": "financial_statements",
+      "expected_pii": [
+        {
+          "type": "PAN",
+          "value": "CZUPP7582B",
+          "token": "{{PAN_1}}"
+        }
+      ],
+      "intent_cases": [
+        {
+          "prompt": "What is the PAN number of the proprietor?",
+          "expected_intent": "extraction"
+        },
+        {
+          "prompt": "Give me a summary of this financial document",
+          "expected_intent": "summarization"
+        },
+        {
+          "prompt": "What type of financial document is this?",
+          "expected_intent": "classification"
+        }
+      ],
+      "simple_extraction": [
+        {
+          "prompt": "What is the PAN number of the proprietor?",
+          "expected": "CZUPP7582B",
+          "field_type": "exact"
+        },
+        {
+          "prompt": "What is the total capital as on 31.03.2023?",
+          "expected": "4612930",
+          "field_type": "numeric"
+        },
+        {
+          "prompt": "What is the net profit for the year?",
+          "expected": "755600",
+          "field_type": "numeric"
+        }
+      ],
+      "varied_extraction": [
+        {
+          "prompt": "Provide the PAN mentioned for the proprietor in this document.",
+          "expected": "CZUPP7582B",
+          "field_type": "exact"
+        },
+        {
+          "prompt": "How much is the closing capital balance as of 31.03.2023?",
+          "expected": "4612930",
+          "field_type": "numeric"
+        },
+        {
+          "prompt": "State the net profit transferred to the capital account for the year.",
+          "expected": "755600",
+          "field_type": "numeric"
+        },
+        {
+          "prompt": "Identify the full name of the proprietor listed.",
+          "expected": "TEJAS NAMDEV PAWAR",
+          "field_type": "exact"
+        },
+        {
+          "prompt": "What is the total value of fixed assets reported in the balance sheet?",
+          "expected": "572967",
+          "field_type": "numeric"
+        }
+      ]
+    },
+    {
+      "id": "Document2",
+      "filename": "Document2.pdf",
+      "document_type": "commercial_invoice",
+      "expected_pii": [],
+      "intent_cases": [
+        {
+          "prompt": "What is the invoice number?",
+          "expected_intent": "extraction"
+        },
+        {
+          "prompt": "Summarise this invoice",
+          "expected_intent": "summarization"
+        },
+        {
+          "prompt": "What kind of document is this?",
+          "expected_intent": "classification"
+        }
+      ],
+      "simple_extraction": [
+        {
+          "prompt": "What is the invoice number?",
+          "expected": "S2401-34",
+          "field_type": "exact"
+        },
+        {
+          "prompt": "What is the invoice date?",
+          "expected": "05 Jan 2024",
+          "field_type": "exact"
+        },
+        {
+          "prompt": "What is the currency used in the invoice?",
+          "expected": "GBP",
+          "field_type": "exact"
+        }
+      ],
+      "varied_extraction": [
+        {
+          "prompt": "Mention the invoice reference number shown on the document.",
+          "expected": "S2401-34",
+          "field_type": "exact"
+        },
+        {
+          "prompt": "On what date was this invoice issued?",
+          "expected": "05 Jan 2024",
+          "field_type": "exact"
+        },
+        {
+          "prompt": "Which currency is used for billing in this invoice?",
+          "expected": "GBP",
+          "field_type": "exact"
+        },
+        {
+          "prompt": "What is the listed unit price for the PL56V CABLE KIT item?",
+          "expected": "187.50",
+          "field_type": "numeric"
+        },
+        {
+          "prompt": "Provide the total sales value for the PH20 MT SYSTEM KIT 1 line item.",
+          "expected": "4354.75",
+          "field_type": "numeric"
+        }
+      ]
+    },
+    {
+      "id": "Document3",
+      "filename": "Document3.pdf",
+      "document_type": "audit_report",
+      "expected_pii": [],
+      "intent_cases": [
+        {
+          "prompt": "What is the name of the company that was audited?",
+          "expected_intent": "extraction"
+        },
+        {
+          "prompt": "Summarise the key findings of this audit report",
+          "expected_intent": "summarization"
+        },
+        {
+          "prompt": "What type of document is this?",
+          "expected_intent": "classification"
+        }
+      ],
+      "simple_extraction": [
+        {
+          "prompt": "What is the name of the company audited?",
+          "expected": "ENZA HYBRID SEEDS PRIVATE LIMITED",
+          "field_type": "exact"
+        },
+        {
+          "prompt": "What is the date of the balance sheet mentioned in the report?",
+          "expected": "March 31, 2022",
+          "field_type": "exact"
+        },
+        {
+          "prompt": "What is the Firm Registration Number?",
+          "expected": "104246W",
+          "field_type": "exact"
+        }
+      ],
+      "varied_extraction": [
+        {
+          "prompt": "Name the company whose financial statements were audited.",
+          "expected": "ENZA HYBRID SEEDS PRIVATE LIMITED",
+          "field_type": "exact"
+        },
+        {
+          "prompt": "What balance sheet date is referenced in the report?",
+          "expected": "March 31, 2022",
+          "field_type": "exact"
+        }
+      ]
+    },
+    {
+      "id": "Document4",
+      "filename": "Document4.pdf",
+      "document_type": "annual_report",
+      "expected_pii": [],
+      "intent_cases": [
+        {
+          "prompt": "What is the total assets as at 31st March 2018?",
+          "expected_intent": "extraction"
+        },
+        {
+          "prompt": "Give me an overview of HUL's annual report",
+          "expected_intent": "summarization"
+        },
+        {
+          "prompt": "Classify this document for me",
+          "expected_intent": "classification"
+        }
+      ],
+      "simple_extraction": [
+        {
+          "prompt": "What is the name of the managing director and CEO?",
+          "expected": "Sanjiv Mehta",
+          "field_type": "exact"
+        },
+        {
+          "prompt": "What is the equity share capital?",
+          "expected": "216.50",
+          "field_type": "numeric"
+        },
+        {
+          "prompt": "What is the Total Revenue for the year?",
+          "expected": "34500",
+          "field_type": "numeric"
+        }
+      ],
+      "varied_extraction": [
+        {
+          "prompt": "Who is listed as the Managing Director and CEO?",
+          "expected": "Sanjiv Mehta",
+          "field_type": "exact"
+        },
+        {
+          "prompt": "What is the equity share capital amount reported?",
+          "expected": "216",
+          "field_type": "numeric"
+        }
+      ]
+    },
+    {
+      "id": "Document5",
+      "filename": "Document5.pdf",
+      "document_type": "cash_flow_statement",
+      "expected_pii": [],
+      "intent_cases": [
+        {
+          "prompt": "What is the profit before tax for the year ended March 31, 2023?",
+          "expected_intent": "extraction"
+        },
+        {
+          "prompt": "Summarise the cash flows in this document",
+          "expected_intent": "summarization"
+        },
+        {
+          "prompt": "What kind of financial statement is this?",
+          "expected_intent": "classification"
+        }
+      ],
+      "simple_extraction": [
+        {
+          "prompt": "What is the profit before tax for the year ended March 31, 2023?",
+          "expected": "2362.19",
+          "field_type": "numeric"
+        },
+        {
+          "prompt": "What is the depreciation and amortization for 2023?",
+          "expected": "4.97",
+          "field_type": "numeric"
+        },
+        {
+          "prompt": "What is the net cash generated from operating activities in 2023?",
+          "expected": "-784.75",
+          "field_type": "numeric"
+        }
+      ],
+      "varied_extraction": [
+        {
+          "prompt": "Indicate the profit before tax for the year ended March 31, 2023.",
+          "expected": "2362.19",
+          "field_type": "numeric"
+        },
+        {
+          "prompt": "What amount is recorded under depreciation and amortization for 2023?",
+          "expected": "4.97",
+          "field_type": "numeric"
+        },
+        {
+          "prompt": "Provide the net cash from operating activities (A) for 2023.",
+          "expected": "-784.75",
+          "field_type": "numeric"
+        },
+        {
+          "prompt": "What is the net cash generated from investing activities (B) in 2023?",
+          "expected": "514.57",
+          "field_type": "numeric"
+        },
+        {
+          "prompt": "Identify the company name shown in this cash flow statement.",
+          "expected": "IL&FS Investment Managers Limited",
+          "field_type": "exact"
+        }
+      ]
+    },
+    {
+      "id": "Document6",
+      "filename": "Document6.pdf",
+      "document_type": "bank_statement",
+      "expected_pii": [
+        {
+          "type": "IFSC",
+          "value": "PYTM0123456",
+          "token": "{{IFSC_4}}"
+        }
+      ],
+      "intent_cases": [
+        {
+          "prompt": "What is the debit amount for the ANMOL PALACE transaction?",
+          "expected_intent": "extraction"
+        },
+        {
+          "prompt": "Give me a summary of all transactions in this bank statement",
+          "expected_intent": "summarization"
+        },
+        {
+          "prompt": "What type of document is this?",
+          "expected_intent": "classification"
+        }
+      ],
+      "simple_extraction": [
+        {
+          "prompt": "What is the debit amount for the transaction with ANMOL PALACE?",
+          "expected": "30000",
+          "field_type": "numeric"
+        },
+        {
+          "prompt": "What is the balance after the transaction on 12 Apr 2023 at 10:55:28?",
+          "expected": "47347.06",
+          "field_type": "numeric"
+        },
+        {
+          "prompt": "What is the credit amount received from GOOGLE INDIA DIGITAL SERVICES on 13 Apr 2023?",
+          "expected": "4320",
+          "field_type": "numeric"
+        }
+      ],
+      "varied_extraction": [
+        {
+          "prompt": "What debit amount was recorded for the ANMOL PALACE transaction?",
+          "expected": "30000",
+          "field_type": "numeric"
+        },
+        {
+          "prompt": "After the transaction at 10:55:28 on 12 Apr 2023, what was the balance?",
+          "expected": "47347.06",
+          "field_type": "numeric"
+        },
+        {
+          "prompt": "How much credit was received from GOOGLE INDIA DIGITAL SERVICES on 13 Apr 2023?",
+          "expected": "4320",
+          "field_type": "numeric"
+        },
+        {
+          "prompt": "Which branch code appears for these transactions?",
+          "expected": "1027",
+          "field_type": "numeric"
+        },
+        {
+          "prompt": "On what date did the PYTM-related transaction occur on 14 Apr 2023?",
+          "expected": "14-04-2023",
+          "field_type": "exact"
+        }
+      ]
+    }
+  ]
+}
